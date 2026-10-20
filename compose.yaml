@@ -1,0 +1,24 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: studyai_db
+      POSTGRES_USER: studyai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD en .env}
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - studyai_pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studyai -d studyai_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  studyai_pgdata:
