@@ -25,14 +25,17 @@ def db_engine(monkeypatch):
     test_url = original_url.set(database="studyai_test_db")
 
     engine = create_engine(test_url, pool_pre_ping=True)
-
+    
     try:
         # Comprobar que estamos en la base de pruebas
         with engine.connect() as connection:
             database_name = connection.execute(
                 text("SELECT current_database()")
             ).scalar_one()
+        # Mostrar la base utilizada
+        print(f"\nBase de datos utilizada: {database_name}")
 
+        # Detener la prueba si no estamos en la base de pruebas
         assert database_name == "studyai_test_db"
 
         # Hacer que el repositorio use esta conexión
@@ -162,4 +165,58 @@ def test_rollback_on_invalid_chunk(db_engine):
 
     finally:
         # Limpieza adicional por seguridad
+        delete_test_document(db_engine, filename)
+
+# Prueba 3: Eliminar documento y comprobar ON DELETE CASCADE
+def test_delete_document_cascades(db_engine):
+    filename = f"pytest_{uuid4().hex}.pdf"
+    document = build_document(filename)
+
+    try:
+        # Guardar un documento con dos chunks
+        document_id = document_repository.save_document(document)
+
+        with db_engine.connect() as connection:
+            chunks_before = connection.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM document_chunks
+                    WHERE document_id = :document_id
+                """),
+                {"document_id": document_id}
+            ).scalar_one()
+
+        assert chunks_before == 2
+
+        # Eliminar el documento
+        assert document_repository.delete_document(document_id) is True
+
+        # Verificar que desaparecieron documento y chunks
+        with db_engine.connect() as connection:
+            document_count = connection.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM documents
+                    WHERE id = :document_id
+                """),
+                {"document_id": document_id}
+            ).scalar_one()
+
+            chunk_count = connection.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM document_chunks
+                    WHERE document_id = :document_id
+                """),
+                {"document_id": document_id}
+            ).scalar_one()
+
+        assert document_count == 0
+        assert chunk_count == 0
+
+        # Intentar eliminarlo nuevamente debe devolver False
+        assert document_repository.delete_document(document_id) is False
+
+    finally:
+        # Limpieza por si alguna comprobación falla
         delete_test_document(db_engine, filename)
