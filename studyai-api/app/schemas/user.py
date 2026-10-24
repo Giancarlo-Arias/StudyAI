@@ -33,3 +33,7 @@ class UserPublic(BaseModel):
     email_verified_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class EmailVerificationRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)   

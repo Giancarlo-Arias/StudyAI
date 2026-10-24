@@ -2,9 +2,16 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
-from app.schemas.user import UserRegister, UserPublic
-from app.services.user_service import register_user
+
 from app.repositories.user_repository import UserAlreadyExistsError
+from app.schemas.user import (
+    EmailVerificationRequest,
+    UserPublic,
+    UserRegister,
+)
+from app.services.email_verification_service import verify_user_email
+from app.services.user_service import register_user
+
 
 
 # Configuración del router de autenticación
@@ -49,3 +56,28 @@ async def register(data: UserRegister):
 
     # FastAPI filtra la respuesta usando UserPublic
     return user
+
+@router.post(
+    "/verify-email",
+    status_code=status.HTTP_200_OK,
+    summary="Verificar correo electrónico",
+)
+async def verify_email(data: EmailVerificationRequest):
+    try:
+        verified = await run_in_threadpool(
+            verify_user_email,
+            data.token,
+        )
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al verificar el correo",
+        ) from exc
+
+    if not verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Token inválido, vencido o utilizado",
+        )
+
+    return {"message": "Correo verificado correctamente"}

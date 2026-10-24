@@ -13,26 +13,15 @@ class UserAlreadyExistsError(Exception):
 def create_user(
     full_name: str,
     email: str,
-    password_hash: str
+    password_hash: str,
+    verification_token_hash: str | None = None,
 ) -> dict:
-
     try:
-        # Abrir transacción
         with get_engine().begin() as connection:
-
-            # Crear usuario con valores parametrizados
             result = connection.execute(
                 text("""
-                    INSERT INTO users (
-                        full_name,
-                        email,
-                        password_hash
-                    )
-                    VALUES (
-                        :full_name,
-                        LOWER(BTRIM(:email)),
-                        :password_hash
-                    )
+                    INSERT INTO users (full_name, email, password_hash)
+                    VALUES (:full_name, LOWER(BTRIM(:email)), :password_hash)
                     RETURNING
                         id,
                         full_name,
@@ -45,29 +34,40 @@ def create_user(
                 {
                     "full_name": full_name,
                     "email": email,
-                    "password_hash": password_hash
-                }
+                    "password_hash": password_hash,
+                },
             )
 
-            # No devolver la contraseña ni su hash
-            return dict(result.mappings().one())
+            user = dict(result.mappings().one())
+
+            if verification_token_hash is not None:
+                connection.execute(
+                    text("""
+                        INSERT INTO email_verification_tokens (
+                            user_id,
+                            token_hash
+                        )
+                        VALUES (:user_id, :token_hash);
+                    """),
+                    {
+                        "user_id": user["id"],
+                        "token_hash": verification_token_hash,
+                    },
+                )
+
+            return user
 
     except IntegrityError as exc:
-
-        # Identificar el error generado por PostgreSQL
         sqlstate = getattr(exc.orig, "sqlstate", None)
-
         constraint = getattr(
             getattr(exc.orig, "diag", None),
             "constraint_name",
-            None
+            None,
         )
 
-        # El índice único impide correos duplicados
         if sqlstate == "23505" and constraint == "ux_users_email_lower":
             raise UserAlreadyExistsError(
                 "Ya existe una cuenta con ese correo"
             ) from exc
 
-        # No ocultar otros errores de integridad
         raise
