@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,7 +24,7 @@ def valid_user_data():
 def test_register_user_success(monkeypatch):
     now = datetime.now(timezone.utc)
 
-    mock_register = Mock(return_value={
+    mock_register = AsyncMock(return_value={
         "id": 1,
         "full_name": "Giancarlo Arias",
         "email": "giancarlo@example.com",
@@ -36,7 +36,7 @@ def test_register_user_success(monkeypatch):
     })
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_user",
+        "app.api.v1.routers.auth.register_and_send_verification",
         mock_register
     )
 
@@ -58,19 +58,19 @@ def test_register_user_success(monkeypatch):
     assert "password" not in data
     assert "password_hash" not in data
 
-    mock_register.assert_called_once()
+    mock_register.assert_awaited_once()
 
 
 # Prueba 2: Rechazar correo duplicado
 def test_register_duplicate_email(monkeypatch):
-    mock_register = Mock(
+    mock_register = AsyncMock(
         side_effect=UserAlreadyExistsError(
             "Ya existe una cuenta con ese correo"
         )
     )
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_user",
+        "app.api.v1.routers.auth.register_and_send_verification",
         mock_register
     )
 
@@ -84,13 +84,15 @@ def test_register_duplicate_email(monkeypatch):
         "Ya existe una cuenta con ese correo"
     )
 
+    mock_register.assert_awaited_once()
+
 
 # Prueba 3: Rechazar datos inválidos
 def test_register_invalid_data(monkeypatch):
-    mock_register = Mock()
+    mock_register = AsyncMock()
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_user",
+        "app.api.v1.routers.auth.register_and_send_verification",
         mock_register
     )
 
@@ -106,17 +108,17 @@ def test_register_invalid_data(monkeypatch):
     assert response.status_code == 422
 
     # Los datos inválidos no deben llegar al servicio
-    mock_register.assert_not_called()
+    mock_register.assert_not_awaited()
 
 
 # Prueba 4: Manejar errores de PostgreSQL
 def test_register_database_error(monkeypatch):
-    mock_register = Mock(
+    mock_register = AsyncMock(
         side_effect=SQLAlchemyError("Error interno de prueba")
     )
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_user",
+        "app.api.v1.routers.auth.register_and_send_verification",
         mock_register
     )
 
@@ -129,3 +131,5 @@ def test_register_database_error(monkeypatch):
     assert response.json()["detail"] == (
         "Error interno al registrar el usuario"
     )
+
+    mock_register.assert_awaited_once()

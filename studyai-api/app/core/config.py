@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     db_user: str = "studyai"
     db_password: str | None = None
 
+    # Resend email configuration
+    resend_api_key: str = ""
+    resend_from_email: str = ""
+    email_verification_url: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

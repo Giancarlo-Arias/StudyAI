@@ -4,7 +4,11 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
-from app.core.security import generate_email_verification_token
+from app.core.security import (
+    generate_email_verification_token,
+    hash_email_verification_token,
+)
+
 from app.db.connection import get_engine
 from app.repositories import user_repository
 from app.schemas.user import UserRegister
@@ -114,3 +118,36 @@ def test_register_user_rolls_back_if_token_fails(
         ).scalar_one()
 
     assert users_count == 0
+
+
+
+def test_registration_returns_token_for_email(monkeypatch):
+    saved_data = {}
+
+    def fake_create_user(**kwargs):
+        saved_data.update(kwargs)
+
+        return {
+            "id": 1,
+            "email": kwargs["email"],
+        }
+
+    monkeypatch.setattr(
+        user_service,
+        "create_user",
+        fake_create_user,
+    )
+
+    data = UserRegister(
+        full_name="Usuario Prueba",
+        email="usuario@example.com",
+        password="Password-Segura-2026!",
+    )
+
+    user, token = user_service.register_user_with_verification(data)
+
+    assert user["id"] == 1
+    assert len(token) == 43
+    assert saved_data["verification_token_hash"] == (
+        hash_email_verification_token(token)
+    )

@@ -36,4 +36,8 @@ class UserPublic(BaseModel):
 
 
 class EmailVerificationRequest(BaseModel):
-    token: str = Field(min_length=1, max_length=256)   
+    token: str = Field(min_length=1, max_length=256)
+
+
+class EmailVerificationResendRequest(BaseModel):
+    email: EmailStr   
