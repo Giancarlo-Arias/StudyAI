@@ -1,21 +1,22 @@
-
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
-from sqlalchemy.exc import SQLAlchemyError
-from starlette.concurrency import run_in_threadpool
+from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from sqlalchemy.exc import SQLAlchemyError
+from starlette.concurrency import run_in_threadpool
+
+from app.api.v1.dependencies import get_current_user
+from app.repositories.document_access_repository import (
+    delete_document_for_user,
+    get_document_with_chunks_for_user,
+    list_documents_for_user,
+)
+from app.repositories.document_repository import save_document_for_user
+from app.services.document_processing_service import process_pdf
 from app.services.document_service import (
     MAX_FILE_SIZE,
-    InvalidDocumentError,
     DocumentTooLargeError,
-)
-
-from app.services.document_processing_service import process_pdf
-from app.repositories.document_repository import (
-    save_document,
-    list_documents,
-    get_document_by_id,
-    delete_document,
+    InvalidDocumentError,
 )
 
 
@@ -23,16 +24,23 @@ from app.repositories.document_repository import (
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
-
-# Subir, procesar y guardar un PDF
-@router.post("/upload", status_code=200, summary="Subir y guardar documento PDF", description="Valida un PDF, extrae su texto, genera fragmentos y los guarda.",
+# Subir, procesar y guardar un PDF del usuario autenticado
+@router.post(
+    "/upload",
+    status_code=200,
+    summary="Subir y guardar documento PDF",
+    description="Valida un PDF, extrae su texto, genera fragmentos y los guarda.",
     responses={
         400: {"description": "Archivo PDF inválido o sin texto"},
+        401: {"description": "No autenticado"},
         413: {"description": "El archivo supera el tamaño permitido"},
         500: {"description": "Error interno al guardar el documento"},
     },
 )
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    file: UploadFile = File(...),
+):
     try:
         # Leer únicamente hasta el límite permitido
         content = await file.read(MAX_FILE_SIZE + 1)
@@ -40,11 +48,10 @@ async def upload_document(file: UploadFile = File(...)):
         try:
             # Procesar PDF fuera del ciclo de eventos
             result = await run_in_threadpool(
-                process_pdf, 
-                file.filename, 
-                content
+                process_pdf,
+                file.filename,
+                content,
             )
-
 
         except DocumentTooLargeError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
@@ -52,18 +59,20 @@ async def upload_document(file: UploadFile = File(...)):
         except InvalidDocumentError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        # Guardar documento y chunks en PostgreSQL
+        # Guardar documento, propietario y chunks en PostgreSQL
         try:
             document_id = await run_in_threadpool(
-                save_document,
-                result
+                save_document_for_user,
+                result,
+                current_user["id"],
             )
-        
-        except SQLAlchemyError as exc:
-            # No exponer detalles internos de PostgreSQL
-            raise HTTPException(status_code=500, detail="Error interno al guardar el documento") from exc
 
-        
+        except SQLAlchemyError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="Error interno al guardar el documento",
+            ) from exc
+
         # Devolver información del documento guardado
         return {
             "message": "PDF procesado y guardado correctamente",
@@ -80,31 +89,41 @@ async def upload_document(file: UploadFile = File(...)):
         await file.close()
 
 
-# Listar los documentos almacenados
-@router.get( "", status_code=200, summary="Listar documentos", description="Consulta metadatos de documentos con paginación.")
+# Listar únicamente los documentos del usuario autenticado
+@router.get(
+    "",
+    status_code=200,
+    summary="Listar documentos",
+    description="Consulta los documentos del usuario autenticado con paginación.",
+    responses={
+        401: {"description": "No autenticado"},
+        500: {"description": "Error interno al consultar documentos"},
+    },
+)
 async def get_documents(
+    current_user: Annotated[dict, Depends(get_current_user)],
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
 ):
     try:
-        # Consultar PostgreSQL sin bloquear FastAPI
         documents = await run_in_threadpool(
-            list_documents,
-            limit=limit,
-            offset=offset
+            list_documents_for_user,
+            current_user["id"],
+            limit,
+            offset,
         )
 
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=500,
-            detail="Error interno al consultar documentos"
+            detail="Error interno al consultar documentos",
         ) from exc
 
     return {
         "documents": documents,
         "count": len(documents),
         "limit": limit,
-        "offset": offset
+        "offset": offset,
     }
 
 
@@ -114,67 +133,74 @@ async def get_documents(
     status_code=200,
     summary="Consultar documento por UUID",
     responses={
+        401: {"description": "No autenticado"},
         404: {"description": "Documento no encontrado"},
         500: {"description": "Error al consultar PostgreSQL"},
     },
 )
 async def get_document(
     document_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
 ):
     try:
-        # Consultar documento y chunks sin bloquear FastAPI
+        # Consultar únicamente documentos y chunks propios
         result = await run_in_threadpool(
-            get_document_by_id,
+            get_document_with_chunks_for_user,
             document_id,
+            current_user["id"],
             limit,
-            offset
+            offset,
         )
 
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=500,
-            detail="Error interno al consultar el documento"
+            detail="Error interno al consultar el documento",
         ) from exc
 
-    # UUID válido, pero el documento no existe
     if result is None:
         raise HTTPException(
             status_code=404,
-            detail="Documento no encontrado"
+            detail="Documento no encontrado",
         )
 
     return result
 
 
-# Eliminar documento y chunks por UUID
+# Eliminar únicamente documentos del usuario autenticado
 @router.delete(
     "/{document_id}",
     status_code=204,
     summary="Eliminar documento",
     responses={
+        401: {"description": "No autenticado"},
         404: {"description": "Documento no encontrado"},
         500: {"description": "Error al eliminar el documento"},
     },
 )
-async def remove_document(document_id: UUID):
+async def remove_document(
+    document_id: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+):
     try:
         deleted = await run_in_threadpool(
-            delete_document,
-            document_id
+            delete_document_for_user,
+            document_id,
+            current_user["id"],
         )
 
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=500,
-            detail="Error interno al eliminar el documento"
+            detail="Error interno al eliminar el documento",
         ) from exc
 
     if not deleted:
         raise HTTPException(
             status_code=404,
-            detail="Documento no encontrado"
+            detail="Documento no encontrado",
         )
 
     # 204 No Content: eliminación exitosa, sin cuerpo JSON

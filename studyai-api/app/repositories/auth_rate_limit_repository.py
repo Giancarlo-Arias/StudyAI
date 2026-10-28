@@ -52,3 +52,19 @@ def allow_auth_request(client_ip: str, action: str) -> bool:
         ).scalar_one_or_none()
 
         return result is not None
+
+
+
+def delete_expired_auth_rate_limits() -> int:
+    """Eliminar contadores cuya ventana de 15 minutos terminó."""
+
+    with get_engine().begin() as connection:
+        result = connection.execute(
+            text("""
+                DELETE FROM auth_rate_limits
+                WHERE window_started_at
+                    <= statement_timestamp() - INTERVAL '15 minutes';
+            """)
+        )
+
+        return result.rowcount

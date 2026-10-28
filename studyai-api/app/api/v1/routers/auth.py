@@ -1,19 +1,32 @@
 import logging
+from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from resend.exceptions import ResendError
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
+from app.api.v1.dependencies import get_current_user
+from app.core.jwt_tokens import create_access_token
 from app.repositories.auth_rate_limit_repository import allow_auth_request
 from app.repositories.user_repository import UserAlreadyExistsError
 from app.schemas.user import (
+    AccessTokenResponse,
+    CurrentUserResponse,
     EmailVerificationRequest,
     EmailVerificationResendRequest,
+    UserLogin,
     UserPublic,
     UserRegister,
 )
+
+from app.services.auth_service import (
+    EmailNotVerifiedError,
+    InvalidCredentialsError,
+    authenticate_user,
+)
+
 from app.services.email_verification_service import (
     resend_verification_email,
     verify_user_email,
@@ -156,3 +169,101 @@ async def resend_verification(
             "recibirás un correo con instrucciones"
         )
     }
+
+
+
+# Iniciar sesión y generar el token de acceso JWT
+@router.post(
+    "/login",
+    response_model=AccessTokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Iniciar sesión",
+    description="Autentica al usuario y devuelve un JWT de acceso.",
+    responses={
+        401: {"description": "Credenciales inválidas"},
+        403: {"description": "Correo electrónico sin verificar"},
+        422: {"description": "Datos inválidos"},
+        429: {"description": "Límite de solicitudes alcanzado"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def login(data: UserLogin, request: Request):
+    client_ip = request.client.host if request.client else None
+
+    if client_ip is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        )
+
+    try:
+        allowed = await run_in_threadpool(
+            allow_auth_request,
+            client_ip,
+            "login",
+        )
+    except (SQLAlchemyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos. Intenta más tarde",
+        )
+
+    try:
+        user = await run_in_threadpool(
+            authenticate_user,
+            str(data.email),
+            data.password,
+        )
+
+    except InvalidCredentialsError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Correo o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    except EmailNotVerifiedError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Debes verificar tu correo electrónico",
+        ) from exc
+
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    try:
+        access_token = create_access_token(user["id"])
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    return AccessTokenResponse(access_token=access_token)
+
+
+# Obtener el perfil del usuario autenticado
+@router.get(
+    "/me",
+    response_model=CurrentUserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener usuario autenticado",
+    description="Devuelve los datos públicos del usuario autenticado mediante JWT.",
+    responses={
+        401: {"description": "Token inválido o usuario no autorizado"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def get_my_profile(
+    current_user: Annotated[dict, Depends(get_current_user)],
+):
+    return current_user

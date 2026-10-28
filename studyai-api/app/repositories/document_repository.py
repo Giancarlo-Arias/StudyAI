@@ -6,30 +6,32 @@ from app.db.connection import get_engine
 from app.services.document_processing_service import ProcessedDocument
 
 
-# Guardar un documento y sus fragmentos en una transacción
-def save_document(document: ProcessedDocument) -> UUID:
+# Insertar un documento y sus chunks dentro de una única transacción
+def _save_document_with_chunks(
+    document: ProcessedDocument,
+    user_id: int | None,
+) -> UUID:
 
-    # Evitar registrar documentos sin contenido procesado
     if not document.chunks:
         raise ValueError("El documento no contiene fragmentos")
 
-    # Iniciar transacción: COMMIT o ROLLBACK automático
     with get_engine().begin() as connection:
 
-        # Insertar los metadatos del documento
         result = connection.execute(
             text("""
                 INSERT INTO documents (
                     filename,
                     size_bytes,
                     pages_with_text,
-                    text_length
+                    text_length,
+                    user_id
                 )
                 VALUES (
                     :filename,
                     :size_bytes,
                     :pages_with_text,
-                    :text_length
+                    :text_length,
+                    :user_id
                 )
                 RETURNING id;
             """),
@@ -37,25 +39,23 @@ def save_document(document: ProcessedDocument) -> UUID:
                 "filename": document.filename,
                 "size_bytes": document.size_bytes,
                 "pages_with_text": document.pages_with_text,
-                "text_length": document.text_length
-            }
+                "text_length": document.text_length,
+                "user_id": user_id,
+            },
         )
 
-        # Recuperar el UUID generado por PostgreSQL
         document_id = result.scalar_one()
 
-        # Preparar los datos de cada fragmento
         chunks_data = [
             {
                 "document_id": document_id,
                 "page_number": chunk.page_number,
                 "chunk_index": chunk.chunk_index,
-                "text": chunk.text
+                "text": chunk.text,
             }
             for chunk in document.chunks
         ]
 
-        # Insertar todos los fragmentos
         connection.execute(
             text("""
                 INSERT INTO document_chunks (
@@ -71,16 +71,32 @@ def save_document(document: ProcessedDocument) -> UUID:
                     :text
                 );
             """),
-            chunks_data
+            chunks_data,
         )
 
-    # Devolver el identificador del documento guardado
     return document_id
+
+
+# Compatibilidad temporal con el guardado anterior
+def save_document(document: ProcessedDocument) -> UUID:
+    return _save_document_with_chunks(document, None)
+
+
+# Guardar un documento perteneciente a un usuario autenticado
+def save_document_for_user(
+    document: ProcessedDocument,
+    user_id: int,
+) -> UUID:
+
+    if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
+        raise ValueError("ID de usuario inválido")
+
+    return _save_document_with_chunks(document, user_id)
+
 
 # Listar documentos con paginación
 def list_documents(limit: int = 20, offset: int = 0) -> list[dict]:
 
-    # Abrir una conexión para lectura
     with get_engine().connect() as connection:
 
         result = connection.execute(
@@ -98,20 +114,22 @@ def list_documents(limit: int = 20, offset: int = 0) -> list[dict]:
             """),
             {
                 "limit": limit,
-                "offset": offset
-            }
+                "offset": offset,
+            },
         )
 
-        # Convertir los resultados a diccionarios
         return [dict(row) for row in result.mappings().all()]
 
 
 # Consultar un documento específico y paginar sus chunks
-def get_document_by_id( document_id: UUID, limit: int = 20, offset: int = 0) -> dict | None:
+def get_document_by_id(
+    document_id: UUID,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict | None:
 
     with get_engine().connect() as connection:
 
-        # Buscar el documento por su UUID
         document = connection.execute(
             text("""
                 SELECT
@@ -120,23 +138,21 @@ def get_document_by_id( document_id: UUID, limit: int = 20, offset: int = 0) -> 
                 FROM documents
                 WHERE id = :document_id;
             """),
-            {"document_id": document_id}
+            {"document_id": document_id},
         ).mappings().one_or_none()
 
         if document is None:
             return None
 
-        # Contar todos los fragmentos del documento
         chunk_count = connection.execute(
             text("""
                 SELECT COUNT(*)
                 FROM document_chunks
                 WHERE document_id = :document_id;
             """),
-            {"document_id": document_id}
+            {"document_id": document_id},
         ).scalar_one()
 
-        # Recuperar solamente los chunks solicitados
         chunks = connection.execute(
             text("""
                 SELECT id, page_number, chunk_index, text
@@ -148,8 +164,8 @@ def get_document_by_id( document_id: UUID, limit: int = 20, offset: int = 0) -> 
             {
                 "document_id": document_id,
                 "limit": limit,
-                "offset": offset
-            }
+                "offset": offset,
+            },
         ).mappings().all()
 
         return {
@@ -157,12 +173,13 @@ def get_document_by_id( document_id: UUID, limit: int = 20, offset: int = 0) -> 
             "chunks": [dict(chunk) for chunk in chunks],
             "chunk_count": chunk_count,
             "limit": limit,
-            "offset": offset
+            "offset": offset,
         }
 
 
 # Eliminar un documento y sus chunks asociados
 def delete_document(document_id: UUID) -> bool:
+
     with get_engine().begin() as connection:
         result = connection.execute(
             text("""
@@ -170,8 +187,7 @@ def delete_document(document_id: UUID) -> bool:
                 WHERE id = :document_id
                 RETURNING id;
             """),
-            {"document_id": document_id}
+            {"document_id": document_id},
         )
 
-        # True si se eliminó, False si no existía
         return result.scalar_one_or_none() is not None

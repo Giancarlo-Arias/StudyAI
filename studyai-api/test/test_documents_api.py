@@ -2,9 +2,12 @@ from pathlib import Path
 from unittest.mock import Mock
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.v1.dependencies import get_current_user
+from app.api.v1.routers import documents
 from app.main import app
 
 
@@ -13,6 +16,24 @@ client = TestClient(app)
 
 # PDF utilizado para pruebas
 PDF_PATH = Path(__file__).parent / "fixtures" / "ejemplo.pdf"
+
+
+# Simular un usuario autenticado durante las pruebas
+@pytest.fixture(autouse=True)
+def authenticated_user():
+
+    async def fake_current_user():
+        return {
+            "id": 2,
+            "full_name": "Usuario Prueba",
+            "email": "usuario@example.com",
+        }
+
+    app.dependency_overrides[get_current_user] = fake_current_user
+
+    yield
+
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 # Prueba 1: Procesar PDF y llamar al repositorio
@@ -24,8 +45,9 @@ def test_upload_pdf_generates_chunks(monkeypatch):
     mock_save = Mock(return_value=document_id)
 
     monkeypatch.setattr(
-        "app.api.v1.routers.documents.save_document",
-        mock_save
+        documents,
+        "save_document_for_user",
+        mock_save,
     )
 
     response = client.post(
@@ -34,9 +56,9 @@ def test_upload_pdf_generates_chunks(monkeypatch):
             "file": (
                 "ejemplo.pdf",
                 content,
-                "application/pdf"
+                "application/pdf",
             )
-        }
+        },
     )
 
     assert response.status_code == 200
@@ -61,6 +83,9 @@ def test_upload_pdf_generates_chunks(monkeypatch):
     assert processed_document.filename == "ejemplo.pdf"
     assert len(processed_document.chunks) >= 1
 
+    # Verificar que se utilizó el ID del usuario autenticado
+    assert mock_save.call_args.args[1] == 2
+
 
 # Prueba 2: Rechazar un PDF inválido
 def test_upload_invalid_pdf():
@@ -70,9 +95,9 @@ def test_upload_invalid_pdf():
             "file": (
                 "incorrecto.pdf",
                 b"Archivo no valido",
-                "application/pdf"
+                "application/pdf",
             )
-        }
+        },
     )
 
     assert response.status_code == 400
@@ -80,14 +105,16 @@ def test_upload_invalid_pdf():
 
 # Prueba 3: Manejar un error de PostgreSQL
 def test_upload_database_error(monkeypatch):
+
     # Simular un fallo de base de datos
     mock_save = Mock(
         side_effect=SQLAlchemyError("Error interno de prueba")
     )
 
     monkeypatch.setattr(
-        "app.api.v1.routers.documents.save_document",
-        mock_save
+        documents,
+        "save_document_for_user",
+        mock_save,
     )
 
     response = client.post(
@@ -96,15 +123,19 @@ def test_upload_database_error(monkeypatch):
             "file": (
                 "ejemplo.pdf",
                 PDF_PATH.read_bytes(),
-                "application/pdf"
+                "application/pdf",
             )
-        }
+        },
     )
 
     assert response.status_code == 500
+
     assert response.json()["detail"] == (
-    "Error interno al guardar el documento"
+        "Error interno al guardar el documento"
     )
 
     # Confirmar que se intentó guardar
     mock_save.assert_called_once()
+
+    # Confirmar que se utilizó el propietario correcto
+    assert mock_save.call_args.args[1] == 2

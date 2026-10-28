@@ -150,3 +150,67 @@ def test_rate_limit_rejects_invalid_ip(rate_limit_environment):
             "invalid-ip",
             action,
         )
+
+
+
+def test_cleanup_deletes_expired_limits(rate_limit_environment):
+    engine, client_ip, action = rate_limit_environment
+
+    active_ip = "192.0.2.11"
+
+    assert auth_rate_limit_repository.allow_auth_request(
+        client_ip, action
+    ) is True
+
+    assert auth_rate_limit_repository.allow_auth_request(
+        active_ip, action
+    ) is True
+
+    # Simular una ventana vencida para la primera IP.
+    with engine.begin() as connection:
+        connection.execute(
+            text("""
+                UPDATE auth_rate_limits
+                SET window_started_at =
+                    CURRENT_TIMESTAMP - INTERVAL '16 minutes'
+                WHERE ip_address = CAST(:ip_address AS INET)
+                  AND action = :action;
+            """),
+            {
+                "ip_address": client_ip,
+                "action": action,
+            },
+        )
+
+    deleted = auth_rate_limit_repository.delete_expired_auth_rate_limits()
+
+    assert deleted >= 1
+
+    with engine.connect() as connection:
+        remaining = connection.execute(
+            text("""
+                SELECT HOST(ip_address)
+                FROM auth_rate_limits
+                WHERE action = :action;
+            """),
+            {"action": action},
+        ).scalars().all()
+
+    assert client_ip not in remaining
+    assert active_ip in remaining
+
+
+def test_cleanup_preserves_active_rate_limit(rate_limit_environment):
+    _, client_ip, action = rate_limit_environment
+
+    for _ in range(10):
+        assert auth_rate_limit_repository.allow_auth_request(
+            client_ip, action
+        ) is True
+
+    auth_rate_limit_repository.delete_expired_auth_rate_limits()
+
+    # La limpieza no debe reiniciar un límite activo.
+    assert auth_rate_limit_repository.allow_auth_request(
+        client_ip, action
+    ) is False

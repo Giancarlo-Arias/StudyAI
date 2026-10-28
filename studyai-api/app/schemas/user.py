@@ -41,3 +41,18 @@ class EmailVerificationRequest(BaseModel):
 
 class EmailVerificationResendRequest(BaseModel):
     email: EmailStr   
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class CurrentUserResponse(BaseModel):
+    id: int
+    full_name: str
+    email: EmailStr
