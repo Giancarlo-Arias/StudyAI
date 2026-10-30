@@ -1,222 +1,249 @@
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.db.connection import get_engine
-from app.repositories import document_repository
-from app.services.chunking_service import TextChunk
-from app.services.document_processing_service import ProcessedDocument
+from app.repositories import (
+    document_access_repository,
+    document_repository,
+)
 
 
-# Preparar una conexión exclusiva para pruebas
+# Preparar PostgreSQL de pruebas y un usuario propietario
 @pytest.fixture
-def db_engine(monkeypatch):
-    # Obtener la configuración existente de PostgreSQL
-    original_url = get_engine().url
+def test_database(monkeypatch):
+    test_url = get_engine().url.set(database="studyai_test_db")
+    test_engine = create_engine(test_url, pool_pre_ping=True)
 
-    # Evitar pruebas contra un servidor remoto
-    if original_url.host not in ("127.0.0.1", "localhost"):
-        pytest.fail("Las pruebas requieren PostgreSQL local")
+    with test_engine.connect() as connection:
+        database_name = connection.execute(
+            text("SELECT current_database()")
+        ).scalar_one()
 
-    # Utilizar una base distinta a la de desarrollo
-    test_url = original_url.set(database="studyai_test_db")
-
-    engine = create_engine(test_url, pool_pre_ping=True)
-    
-    try:
-        # Comprobar que estamos en la base de pruebas
-        with engine.connect() as connection:
-            database_name = connection.execute(
-                text("SELECT current_database()")
-            ).scalar_one()
-        # Mostrar la base utilizada
-        print(f"\nBase de datos utilizada: {database_name}")
-
-        # Detener la prueba si no estamos en la base de pruebas
         assert database_name == "studyai_test_db"
 
-        # Hacer que el repositorio use esta conexión
-        # únicamente durante la prueba
-        monkeypatch.setattr(
-            document_repository,
-            "get_engine",
-            lambda: engine
-        )
-
-        yield engine
-
-    finally:
-        engine.dispose()
-
-
-# Crear un documento ficticio con dos fragmentos
-def build_document(
-    filename: str,
-    second_chunk_index: int = 2
-) -> ProcessedDocument:
-
-    chunks = (
-        TextChunk(
-            page_number=1,
-            chunk_index=1,
-            text="Primera página de StudyAI."
-        ),
-        TextChunk(
-            page_number=2,
-            chunk_index=second_chunk_index,
-            text="Segunda página de StudyAI."
-        )
+    monkeypatch.setattr(
+        document_repository,
+        "get_engine",
+        lambda: test_engine,
     )
 
-    return ProcessedDocument(
-        filename=filename,
-        size_bytes=2048,
-        pages_with_text=2,
-        text_length=sum(len(chunk.text) for chunk in chunks) + 1,
-        chunks=chunks
+    monkeypatch.setattr(
+        document_access_repository,
+        "get_engine",
+        lambda: test_engine,
     )
 
-
-# Eliminar registros creados por las pruebas
-def delete_test_document(engine: Engine, filename: str) -> None:
-    with engine.begin() as connection:
-        connection.execute(
+    with test_engine.begin() as connection:
+        user_id = connection.execute(
             text("""
-                DELETE FROM documents
-                WHERE filename = :filename
+                INSERT INTO users (
+                    full_name,
+                    email,
+                    password_hash
+                )
+                VALUES (
+                    'Usuario Prueba',
+                    :email,
+                    'hash-de-prueba'
+                )
+                RETURNING id;
             """),
-            {"filename": filename}
-        )
-
-
-# Prueba 1: Guardar documento y comprobar sus relaciones
-def test_save_document_and_chunks(db_engine):
-    filename = f"pytest_{uuid4().hex}.pdf"
-    document = build_document(filename)
+            {"email": f"test_{uuid4().hex}@example.com"},
+        ).scalar_one()
 
     try:
-        document_id = document_repository.save_document(document)
-
-        # Consultar el documento y sus fragmentos usando JOIN
-        with db_engine.connect() as connection:
-            rows = connection.execute(
-                text("""
-                    SELECT
-                        d.filename,
-                        d.size_bytes,
-                        c.page_number,
-                        c.chunk_index,
-                        c.text
-                    FROM documents AS d
-                    INNER JOIN document_chunks AS c
-                        ON d.id = c.document_id
-                    WHERE d.id = :document_id
-                    ORDER BY c.chunk_index
-                """),
-                {"document_id": document_id}
-            ).mappings().all()
-
-        assert len(rows) == 2
-
-        assert rows[0]["filename"] == filename
-        assert rows[0]["size_bytes"] == 2048
-
-        assert rows[0]["page_number"] == 1
-        assert rows[0]["chunk_index"] == 1
-
-        assert rows[1]["page_number"] == 2
-        assert rows[1]["chunk_index"] == 2
+        yield test_engine, user_id
 
     finally:
-        # Se ejecuta incluso si una comprobación falla
-        delete_test_document(db_engine, filename)
+        # Limpiar los documentos creados por este usuario
+        with test_engine.begin() as connection:
+            connection.execute(
+                text("""
+                    DELETE FROM documents
+                    WHERE user_id = :user_id;
+                """),
+                {"user_id": user_id},
+            )
+
+            connection.execute(
+                text("""
+                    DELETE FROM users
+                    WHERE id = :user_id;
+                """),
+                {"user_id": user_id},
+            )
+
+        test_engine.dispose()
 
 
-# Prueba 2: Verificar ROLLBACK ante un error SQL
-def test_rollback_on_invalid_chunk(db_engine):
-    filename = f"pytest_{uuid4().hex}.pdf"
-
-    # El segundo chunk tiene un índice inválido
-    document = build_document(
-        filename,
-        second_chunk_index=0
+# Crear un documento procesado para las pruebas
+def create_test_document():
+    return SimpleNamespace(
+        filename=f"{uuid4()}.pdf",
+        size_bytes=200,
+        pages_with_text=1,
+        text_length=50,
+        chunks=[
+            SimpleNamespace(
+                page_number=1,
+                chunk_index=1,
+                text="Primer fragmento del documento",
+            ),
+            SimpleNamespace(
+                page_number=1,
+                chunk_index=2,
+                text="Segundo fragmento del documento",
+            ),
+        ],
     )
 
-    try:
-        # PostgreSQL debe rechazar la inserción
-        with pytest.raises(IntegrityError):
-            document_repository.save_document(document)
 
-        # Comprobar que tampoco quedó guardado el documento
-        with db_engine.connect() as connection:
-            count = connection.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM documents
-                    WHERE filename = :filename
-                """),
-                {"filename": filename}
-            ).scalar_one()
+# Prueba 1: Guardar documento, propietario y chunks
+def test_save_document_and_chunks(test_database):
+    engine, user_id = test_database
 
-        assert count == 0
+    document = create_test_document()
 
-    finally:
-        # Limpieza adicional por seguridad
-        delete_test_document(db_engine, filename)
+    document_id = document_repository.save_document_for_user(
+        document,
+        user_id,
+    )
 
-# Prueba 3: Eliminar documento y comprobar ON DELETE CASCADE
-def test_delete_document_cascades(db_engine):
-    filename = f"pytest_{uuid4().hex}.pdf"
-    document = build_document(filename)
+    with engine.connect() as connection:
+        saved_document = connection.execute(
+            text("""
+                SELECT id, filename, user_id
+                FROM documents
+                WHERE id = :document_id;
+            """),
+            {"document_id": document_id},
+        ).mappings().one()
 
-    try:
-        # Guardar un documento con dos chunks
-        document_id = document_repository.save_document(document)
+        chunks = connection.execute(
+            text("""
+                SELECT page_number, chunk_index, text
+                FROM document_chunks
+                WHERE document_id = :document_id
+                ORDER BY chunk_index;
+            """),
+            {"document_id": document_id},
+        ).mappings().all()
 
-        with db_engine.connect() as connection:
-            chunks_before = connection.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM document_chunks
-                    WHERE document_id = :document_id
-                """),
-                {"document_id": document_id}
-            ).scalar_one()
+    assert saved_document["id"] == document_id
+    assert saved_document["filename"] == document.filename
+    assert saved_document["user_id"] == user_id
 
-        assert chunks_before == 2
+    assert len(chunks) == 2
+    assert chunks[0]["chunk_index"] == 1
+    assert chunks[1]["chunk_index"] == 2
 
-        # Eliminar el documento
-        assert document_repository.delete_document(document_id) is True
 
-        # Verificar que desaparecieron documento y chunks
-        with db_engine.connect() as connection:
-            document_count = connection.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM documents
-                    WHERE id = :document_id
-                """),
-                {"document_id": document_id}
-            ).scalar_one()
+# Prueba 2: Revertir toda la transacción si un chunk es inválido
+def test_rollback_on_invalid_chunk(test_database):
+    engine, user_id = test_database
 
-            chunk_count = connection.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM document_chunks
-                    WHERE document_id = :document_id
-                """),
-                {"document_id": document_id}
-            ).scalar_one()
+    document = create_test_document()
 
-        assert document_count == 0
-        assert chunk_count == 0
+    # PostgreSQL no permite chunk_index = 0
+    document.chunks[1].chunk_index = 0
 
-        # Intentar eliminarlo nuevamente debe devolver False
-        assert document_repository.delete_document(document_id) is False
+    with pytest.raises(IntegrityError):
+        document_repository.save_document_for_user(
+            document,
+            user_id,
+        )
 
-    finally:
-        # Limpieza por si alguna comprobación falla
-        delete_test_document(db_engine, filename)
+    # El documento tampoco debe haberse guardado
+    with engine.connect() as connection:
+        count = connection.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM documents
+                WHERE filename = :filename
+                  AND user_id = :user_id;
+            """),
+            {
+                "filename": document.filename,
+                "user_id": user_id,
+            },
+        ).scalar_one()
+
+    assert count == 0
+
+
+# Prueba 3: Eliminar un PDF y sus chunks, conservando los demás
+def test_delete_document_cascades(test_database):
+    engine, user_id = test_database
+
+    first_id = document_repository.save_document_for_user(
+        create_test_document(),
+        user_id,
+    )
+
+    second_id = document_repository.save_document_for_user(
+        create_test_document(),
+        user_id,
+    )
+
+    deleted = document_access_repository.delete_document_for_user(
+        first_id,
+        user_id,
+    )
+
+    assert deleted is True
+
+    with engine.connect() as connection:
+        deleted_document_count = connection.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM documents
+                WHERE id = :document_id;
+            """),
+            {"document_id": first_id},
+        ).scalar_one()
+
+        deleted_chunks_count = connection.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM document_chunks
+                WHERE document_id = :document_id;
+            """),
+            {"document_id": first_id},
+        ).scalar_one()
+
+        remaining_document_count = connection.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM documents
+                WHERE id = :document_id
+                  AND user_id = :user_id;
+            """),
+            {
+                "document_id": second_id,
+                "user_id": user_id,
+            },
+        ).scalar_one()
+
+        remaining_chunks_count = connection.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM document_chunks
+                WHERE document_id = :document_id;
+            """),
+            {"document_id": second_id},
+        ).scalar_one()
+
+    assert deleted_document_count == 0
+    assert deleted_chunks_count == 0
+    assert remaining_document_count == 1
+    assert remaining_chunks_count == 2
+
+    # Eliminar nuevamente el mismo PDF debe devolver False
+    assert document_access_repository.delete_document_for_user(
+        first_id,
+        user_id,
+    ) is False

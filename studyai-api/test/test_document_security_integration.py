@@ -37,7 +37,7 @@ def integration_environment(monkeypatch):
 
         assert database_name == "studyai_test_db"
 
-    # Utilizar PostgreSQL de pruebas en todos los repositorios involucrados
+    # Utilizar PostgreSQL de pruebas en los repositorios
     monkeypatch.setattr(
         auth_repository,
         "get_engine",
@@ -56,7 +56,7 @@ def integration_environment(monkeypatch):
         lambda: test_engine,
     )
 
-    # Asegurar que no estamos simulando get_current_user
+    # Utilizar autenticación real, sin simular get_current_user
     assert get_current_user not in app.dependency_overrides
 
     password_hash = hash_password("ClaveDePruebaSegura2026!")
@@ -111,30 +111,25 @@ def integration_environment(monkeypatch):
             },
         ).scalar_one()
 
-    unassigned_id = uuid4()
-
     try:
         yield {
             "engine": test_engine,
             "user_a_id": user_a_id,
             "user_b_id": user_b_id,
-            "unassigned_id": unassigned_id,
         }
 
     finally:
-        # Limpiar exclusivamente los registros creados para estas pruebas
+        # Limpiar solamente los registros de estos usuarios
         with test_engine.begin() as connection:
 
             connection.execute(
                 text("""
                     DELETE FROM documents
-                    WHERE user_id IN (:user_a_id, :user_b_id)
-                       OR id = :unassigned_id;
+                    WHERE user_id IN (:user_a_id, :user_b_id);
                 """),
                 {
                     "user_a_id": user_a_id,
                     "user_b_id": user_b_id,
-                    "unassigned_id": unassigned_id,
                 },
             )
 
@@ -171,7 +166,7 @@ def test_document_security_between_users(integration_environment):
     headers_a = auth_headers(user_a_id)
     headers_b = auth_headers(user_b_id)
 
-    # Verificar ambos JWT mediante el endpoint real /auth/me
+    # Verificar ambos JWT mediante /auth/me
     response_a = client.get("/api/v1/auth/me", headers=headers_a)
     response_b = client.get("/api/v1/auth/me", headers=headers_b)
 
@@ -181,7 +176,7 @@ def test_document_security_between_users(integration_environment):
     assert response_a.json()["id"] == user_a_id
     assert response_b.json()["id"] == user_b_id
 
-    # Usuario A sube dos documentos reales
+    # Usuario A sube dos documentos
     pdf_content = PDF_PATH.read_bytes()
 
     uploaded_ids = []
@@ -207,7 +202,7 @@ def test_document_security_between_users(integration_environment):
 
     first_id, second_id = uploaded_ids
 
-    # PostgreSQL debe asignar ambos documentos al usuario A
+    # Comprobar que ambos documentos pertenecen al usuario A
     with engine.connect() as connection:
 
         owners = connection.execute(
@@ -236,7 +231,7 @@ def test_document_security_between_users(integration_environment):
 
         assert initial_chunk_count >= 1
 
-    # Usuario A puede listar ambos documentos
+    # Usuario A puede listar sus dos documentos
     response = client.get(
         "/api/v1/documents",
         headers=headers_a,
@@ -252,7 +247,7 @@ def test_document_security_between_users(integration_environment):
     assert str(first_id) in ids_a
     assert str(second_id) in ids_a
 
-    # Usuario B no puede verlos en su listado
+    # Usuario B no puede ver los documentos de A
     response = client.get(
         "/api/v1/documents",
         headers=headers_b,
@@ -261,7 +256,7 @@ def test_document_security_between_users(integration_environment):
     assert response.status_code == 200
     assert response.json()["documents"] == []
 
-    # Usuario A puede consultar los chunks de su primer PDF
+    # Usuario A puede consultar los chunks de su documento
     response = client.get(
         f"/api/v1/documents/{first_id}",
         headers=headers_a,
@@ -287,7 +282,7 @@ def test_document_security_between_users(integration_environment):
 
     assert response.status_code == 404
 
-    # El documento debe seguir disponible para A
+    # El documento sigue existiendo para A
     response = client.get(
         f"/api/v1/documents/{first_id}",
         headers=headers_a,
@@ -295,7 +290,7 @@ def test_document_security_between_users(integration_environment):
 
     assert response.status_code == 200
 
-    # Usuario A elimina solamente su primer PDF
+    # Usuario A elimina solamente el primer PDF
     response = client.delete(
         f"/api/v1/documents/{first_id}",
         headers=headers_a,
@@ -303,7 +298,7 @@ def test_document_security_between_users(integration_environment):
 
     assert response.status_code == 204
 
-    # Comprobar eliminación del PDF y de sus chunks
+    # Comprobar que se eliminaron el PDF y sus chunks
     with engine.connect() as connection:
 
         remaining_document = connection.execute(
@@ -336,7 +331,7 @@ def test_document_security_between_users(integration_environment):
     assert remaining_document == 0
     assert remaining_chunks == 0
 
-    # El segundo PDF debe seguir existiendo
+    # El segundo PDF permanece intacto
     assert second_document_owner == user_a_id
 
     response = client.get(
@@ -347,43 +342,17 @@ def test_document_security_between_users(integration_environment):
     assert response.status_code == 200
 
 
-# Prueba 2: Los documentos sin propietario son inaccesibles
-def test_unassigned_document_is_private(integration_environment):
+# Prueba 2: Un UUID inexistente no permite acceso ni eliminación
+def test_missing_document_is_private(integration_environment):
 
-    engine = integration_environment["engine"]
     user_a_id = integration_environment["user_a_id"]
     user_b_id = integration_environment["user_b_id"]
-    document_id = integration_environment["unassigned_id"]
+    document_id = uuid4()
 
-    headers_a = auth_headers(user_a_id)
-    headers_b = auth_headers(user_b_id)
-
-    # Crear un documento antiguo sin propietario
-    with engine.begin() as connection:
-        connection.execute(
-            text("""
-                INSERT INTO documents (
-                    id,
-                    filename,
-                    size_bytes,
-                    pages_with_text,
-                    text_length,
-                    user_id
-                )
-                VALUES (
-                    :document_id,
-                    'antiguo.pdf',
-                    100,
-                    1,
-                    50,
-                    NULL
-                );
-            """),
-            {"document_id": document_id},
-        )
-
-    # Ninguno de los usuarios puede leerlo
-    for headers in (headers_a, headers_b):
+    for headers in (
+        auth_headers(user_a_id),
+        auth_headers(user_b_id),
+    ):
 
         response = client.get(
             f"/api/v1/documents/{document_id}",
@@ -392,38 +361,9 @@ def test_unassigned_document_is_private(integration_environment):
 
         assert response.status_code == 404
 
-        response = client.get(
-            "/api/v1/documents",
+        response = client.delete(
+            f"/api/v1/documents/{document_id}",
             headers=headers,
         )
 
-        assert response.status_code == 200
-
-        visible_ids = {
-            document["id"]
-            for document in response.json()["documents"]
-        }
-
-        assert str(document_id) not in visible_ids
-
-    # Tampoco pueden eliminarlo
-    response = client.delete(
-        f"/api/v1/documents/{document_id}",
-        headers=headers_a,
-    )
-
-    assert response.status_code == 404
-
-    # Confirmar que sigue existiendo sin propietario
-    with engine.connect() as connection:
-
-        owner = connection.execute(
-            text("""
-                SELECT user_id
-                FROM documents
-                WHERE id = :document_id;
-            """),
-            {"document_id": document_id},
-        ).scalar_one()
-
-    assert owner is None
+        assert response.status_code == 404

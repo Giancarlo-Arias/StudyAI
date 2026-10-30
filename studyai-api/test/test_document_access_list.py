@@ -46,7 +46,6 @@ def document_list_environment(monkeypatch):
 
         owner_documents = [uuid4(), uuid4()]
         other_document = uuid4()
-        unassigned_document = uuid4()
 
         insert_document = text("""
             INSERT INTO documents (
@@ -71,7 +70,6 @@ def document_list_environment(monkeypatch):
             (owner_documents[0], "primero.pdf", owner_id),
             (owner_documents[1], "segundo.pdf", owner_id),
             (other_document, "otro.pdf", other_id),
-            (unassigned_document, "antiguo.pdf", None),
         ]:
             connection.execute(
                 insert_document,
@@ -93,15 +91,13 @@ def document_list_environment(monkeypatch):
                     WHERE id IN (
                         :first_id,
                         :second_id,
-                        :other_id,
-                        :unassigned_id
+                        :other_id
                     );
                 """),
                 {
                     "first_id": owner_documents[0],
                     "second_id": owner_documents[1],
                     "other_id": other_document,
-                    "unassigned_id": unassigned_document,
                 },
             )
 
@@ -119,6 +115,7 @@ def document_list_environment(monkeypatch):
         test_engine.dispose()
 
 
+# Prueba 1: Listar únicamente documentos propios
 def test_list_only_owner_documents(document_list_environment):
     owner_id, _, owner_documents, _ = document_list_environment
 
@@ -132,6 +129,7 @@ def test_list_only_owner_documents(document_list_environment):
     )
 
 
+# Prueba 2: Cada usuario puede listar sus propios documentos
 def test_list_other_user_documents(document_list_environment):
     _, other_id, _, other_document = document_list_environment
 
@@ -143,6 +141,7 @@ def test_list_other_user_documents(document_list_environment):
     assert documents[0]["id"] == other_document
 
 
+# Prueba 3: Validar la paginación
 def test_list_pagination(document_list_environment):
     owner_id, _, owner_documents, _ = document_list_environment
 
@@ -176,6 +175,7 @@ def test_list_pagination(document_list_environment):
     assert returned_ids == set(owner_documents)
 
 
+# Prueba 4: Rechazar paginación inválida
 def test_list_invalid_pagination(document_list_environment):
     owner_id, _, _, _ = document_list_environment
 

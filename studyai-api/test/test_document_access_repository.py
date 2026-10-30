@@ -29,7 +29,7 @@ def document_access_environment(monkeypatch):
     other_email = f"other_{uuid4().hex}@example.com"
 
     owned_document_id = uuid4()
-    unassigned_document_id = uuid4()
+    missing_document_id = uuid4()
 
     with test_engine.begin() as connection:
         owner_id = connection.execute(
@@ -53,12 +53,20 @@ def document_access_environment(monkeypatch):
         connection.execute(
             text("""
                 INSERT INTO documents (
-                    id, filename, size_bytes,
-                    pages_with_text, text_length, user_id
+                    id,
+                    filename,
+                    size_bytes,
+                    pages_with_text,
+                    text_length,
+                    user_id
                 )
                 VALUES (
-                    :id, 'documento-propio.pdf', 100,
-                    1, 50, :user_id
+                    :id,
+                    'documento-propio.pdf',
+                    100,
+                    1,
+                    50,
+                    :user_id
                 );
             """),
             {
@@ -67,34 +75,17 @@ def document_access_environment(monkeypatch):
             },
         )
 
-        connection.execute(
-            text("""
-                INSERT INTO documents (
-                    id, filename, size_bytes,
-                    pages_with_text, text_length, user_id
-                )
-                VALUES (
-                    :id, 'documento-antiguo.pdf', 100,
-                    1, 50, NULL
-                );
-            """),
-            {"id": unassigned_document_id},
-        )
-
     try:
-        yield owner_id, other_user_id, owned_document_id, unassigned_document_id
+        yield owner_id, other_user_id, owned_document_id, missing_document_id
 
     finally:
         with test_engine.begin() as connection:
             connection.execute(
                 text("""
                     DELETE FROM documents
-                    WHERE id IN (:owned_id, :unassigned_id);
+                    WHERE id = :document_id;
                 """),
-                {
-                    "owned_id": owned_document_id,
-                    "unassigned_id": unassigned_document_id,
-                },
+                {"document_id": owned_document_id},
             )
 
             connection.execute(
@@ -111,6 +102,7 @@ def document_access_environment(monkeypatch):
         test_engine.dispose()
 
 
+# Prueba 1: El propietario puede consultar su documento
 def test_owner_can_access_document(document_access_environment):
     owner_id, _, document_id, _ = document_access_environment
 
@@ -124,6 +116,7 @@ def test_owner_can_access_document(document_access_environment):
     assert document["filename"] == "documento-propio.pdf"
 
 
+# Prueba 2: Otro usuario no puede consultar el documento
 def test_other_user_cannot_access_document(document_access_environment):
     _, other_user_id, document_id, _ = document_access_environment
 
@@ -135,7 +128,8 @@ def test_other_user_cannot_access_document(document_access_environment):
     assert document is None
 
 
-def test_unassigned_document_is_not_accessible(document_access_environment):
+# Prueba 3: Un documento inexistente no puede consultarse
+def test_missing_document_is_not_accessible(document_access_environment):
     owner_id, _, _, document_id = document_access_environment
 
     document = document_access_repository.get_document_for_user(
@@ -146,6 +140,7 @@ def test_unassigned_document_is_not_accessible(document_access_environment):
     assert document is None
 
 
+# Prueba 4: El propietario puede eliminar su documento
 def test_owner_can_delete_document(document_access_environment):
     owner_id, _, document_id, _ = document_access_environment
 
@@ -164,6 +159,7 @@ def test_owner_can_delete_document(document_access_environment):
     assert document is None
 
 
+# Prueba 5: Otro usuario no puede eliminar el documento
 def test_other_user_cannot_delete_document(document_access_environment):
     owner_id, other_user_id, document_id, _ = document_access_environment
 
@@ -174,7 +170,6 @@ def test_other_user_cannot_delete_document(document_access_environment):
 
     assert deleted is False
 
-    # El documento del propietario debe seguir existiendo.
     document = document_access_repository.get_document_for_user(
         document_id,
         owner_id,
@@ -183,7 +178,8 @@ def test_other_user_cannot_delete_document(document_access_environment):
     assert document is not None
 
 
-def test_unassigned_document_cannot_be_deleted(document_access_environment):
+# Prueba 6: Un documento inexistente no puede eliminarse
+def test_missing_document_cannot_be_deleted(document_access_environment):
     owner_id, _, _, document_id = document_access_environment
 
     deleted = document_access_repository.delete_document_for_user(

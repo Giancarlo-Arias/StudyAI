@@ -25,7 +25,7 @@ def document_detail_environment(monkeypatch):
 
     own_document_id = uuid4()
     other_document_id = uuid4()
-    unassigned_document_id = uuid4()
+    missing_document_id = uuid4()
 
     with test_engine.begin() as connection:
         owner_id = connection.execute(
@@ -59,7 +59,6 @@ def document_detail_environment(monkeypatch):
         for document_id, filename, user_id in [
             (own_document_id, "propio.pdf", owner_id),
             (other_document_id, "ajeno.pdf", other_user_id),
-            (unassigned_document_id, "antiguo.pdf", None),
         ]:
             connection.execute(
                 insert_document,
@@ -104,7 +103,7 @@ def document_detail_environment(monkeypatch):
             other_user_id,
             own_document_id,
             other_document_id,
-            unassigned_document_id,
+            missing_document_id,
         )
 
     finally:
@@ -112,12 +111,11 @@ def document_detail_environment(monkeypatch):
             connection.execute(
                 text("""
                     DELETE FROM documents
-                    WHERE id IN (:own_id, :other_id, :unassigned_id);
+                    WHERE id IN (:own_id, :other_id);
                 """),
                 {
                     "own_id": own_document_id,
                     "other_id": other_document_id,
-                    "unassigned_id": unassigned_document_id,
                 },
             )
 
@@ -135,6 +133,7 @@ def document_detail_environment(monkeypatch):
         test_engine.dispose()
 
 
+# Prueba 1: El propietario puede consultar sus chunks
 def test_owner_can_read_document_and_chunks(document_detail_environment):
     owner_id, _, document_id, _, _ = document_detail_environment
 
@@ -151,6 +150,7 @@ def test_owner_can_read_document_and_chunks(document_detail_environment):
     assert result["chunks"][1]["text"] == "Segundo fragmento"
 
 
+# Prueba 2: Un usuario no puede consultar documentos ajenos
 def test_other_user_cannot_read_document(document_detail_environment):
     owner_id, other_user_id, document_id, other_document_id, _ = (
         document_detail_environment
@@ -173,17 +173,19 @@ def test_other_user_cannot_read_document(document_detail_environment):
     assert reverse_result is None
 
 
-def test_unassigned_document_cannot_be_read(document_detail_environment):
-    owner_id, _, _, _, unassigned_id = document_detail_environment
+# Prueba 3: Un documento inexistente no puede consultarse
+def test_missing_document_cannot_be_read(document_detail_environment):
+    owner_id, _, _, _, missing_id = document_detail_environment
 
     result = document_access_repository.get_document_with_chunks_for_user(
-        unassigned_id,
+        missing_id,
         owner_id,
     )
 
     assert result is None
 
 
+# Prueba 4: Paginar correctamente los chunks
 def test_document_chunks_pagination(document_detail_environment):
     owner_id, _, document_id, _, _ = document_detail_environment
 
