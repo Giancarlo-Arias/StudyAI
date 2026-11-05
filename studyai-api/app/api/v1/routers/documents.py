@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -12,6 +13,9 @@ from app.repositories.document_access_repository import (
     list_documents_for_user,
 )
 from app.repositories.document_repository import save_document_for_user
+from app.services.document_embedding_service import (
+    generate_and_save_document_embeddings,
+)
 from app.services.document_processing_service import process_pdf
 from app.services.document_service import (
     MAX_FILE_SIZE,
@@ -22,19 +26,19 @@ from app.services.document_service import (
 
 # Configuración del router
 router = APIRouter(prefix="/documents", tags=["Documents"])
+logger = logging.getLogger(__name__)
+
 
 
 # Subir, procesar y guardar un PDF del usuario autenticado
 @router.post(
     "/upload",
     status_code=200,
-    summary="Subir y guardar documento PDF",
-    description="Valida un PDF, extrae su texto, genera fragmentos y los guarda.",
     responses={
-        400: {"description": "Archivo PDF inválido o sin texto"},
+        400: {"description": "Documento inválido"},
         401: {"description": "No autenticado"},
-        413: {"description": "El archivo supera el tamaño permitido"},
-        500: {"description": "Error interno al guardar el documento"},
+        413: {"description": "Documento demasiado grande"},
+        500: {"description": "Error del servidor"},
     },
 )
 async def upload_document(
@@ -42,38 +46,50 @@ async def upload_document(
     file: UploadFile = File(...),
 ):
     try:
-        # Leer únicamente hasta el límite permitido
         content = await file.read(MAX_FILE_SIZE + 1)
 
         try:
-            # Procesar PDF fuera del ciclo de eventos
             result = await run_in_threadpool(
                 process_pdf,
                 file.filename,
                 content,
             )
-
         except DocumentTooLargeError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
-
         except InvalidDocumentError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        # Guardar documento, propietario y chunks en PostgreSQL
         try:
             document_id = await run_in_threadpool(
                 save_document_for_user,
                 result,
                 current_user["id"],
             )
-
         except SQLAlchemyError as exc:
             raise HTTPException(
                 status_code=500,
                 detail="Error interno al guardar el documento",
             ) from exc
 
-        # Devolver información del documento guardado
+        # El PDF y sus chunks ya están guardados.
+        embedding_status = "pending"
+
+        try:
+            embedded_count = await run_in_threadpool(
+                generate_and_save_document_embeddings,
+                document_id,
+                current_user["id"],
+            )
+
+            if embedded_count == len(result.chunks):
+                embedding_status = "ready"
+
+        except Exception:
+            logger.exception(
+                "Error generando embeddings del documento %s",
+                document_id,
+            )
+
         return {
             "message": "PDF procesado y guardado correctamente",
             "document_id": str(document_id),
@@ -82,10 +98,10 @@ async def upload_document(
             "pages_with_text": result.pages_with_text,
             "text_length": result.text_length,
             "chunk_count": len(result.chunks),
+            "embedding_status": embedding_status,
         }
 
     finally:
-        # Cerrar archivo temporal
         await file.close()
 
 

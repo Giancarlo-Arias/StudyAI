@@ -2,7 +2,6 @@
 # Librerías
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 # Configuración interna
 from app.core.config import get_settings
 from app.core.exceptions import unhandled_exception_handler
