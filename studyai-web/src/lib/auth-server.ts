@@ -5,12 +5,10 @@ import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { CurrentUser } from "@/types/auth";
 
-export async function requireUser(): Promise<CurrentUser> {
+export async function getSessionUser(): Promise<CurrentUser | null> {
   const token = (await cookies()).get("studyai_session")?.value;
 
-  if (!token) {
-    redirect("/login");
-  }
+  if (!token) return null;
 
   try {
     return await apiFetch<CurrentUser>("auth/me", {
@@ -20,6 +18,16 @@ export async function requireUser(): Promise<CurrentUser> {
       },
     });
   } catch {
+    return null;
+  }
+}
+
+export async function requireUser(): Promise<CurrentUser> {
+  const user = await getSessionUser();
+
+  if (!user) {
     redirect("/login");
   }
+
+  return user;
 }

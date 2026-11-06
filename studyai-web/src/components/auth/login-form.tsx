@@ -1,5 +1,5 @@
 ﻿"use client";
-
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { login, getCurrentUser } from "@/lib/auth";
 import { validateEmail, validatePassword } from "@/lib/validations/auth";
@@ -180,6 +180,7 @@ const eyePath = "M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0
 const eyeOffPath = "m3 3 18 18M10.6 5.1 12 5c7 0 10 7 10 7a19 19 0 0 0-3.2 4.2M6.2 6.2A20 20 0 0 0 2 12s3 7 10 7a12 12 0 0 0 5.8-1.8M10 10a3 3 0 0 0 4 4";
 
 export function LoginForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -246,6 +247,7 @@ export function LoginForm() {
       }
 
       setIsAuthenticated(true);
+      router.replace("/dashboard");
     } catch {
       setError("No se pudo conectar con el servidor.");
     } finally {
