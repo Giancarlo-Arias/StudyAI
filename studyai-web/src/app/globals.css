@@ -1,0 +1,48 @@
+﻿@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+  --background: light-dark(#f8f9fc, #101015);
+  --foreground: light-dark(#20222d, #f5f5f5);
+  --surface: light-dark(#ffffff, #15151d);
+  --surface-raised: light-dark(#ffffff, #1d1c29);
+  --surface-soft: light-dark(#f0f1f7, #22212e);
+  --primary: light-dark(#5145cd, #6558d3);
+  --primary-foreground: #ffffff;
+  --accent-foreground: light-dark(#5145cd, #bdb6f5);
+  --muted: light-dark(#636879, #b4b1c3);
+  --border: light-dark(#dfe1ea, #343140);
+  --input-border: light-dark(#888ea0, #777285);
+  --accent-soft: light-dark(#eeecff, #2b273d);
+  --focus: var(--accent-foreground);
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-soft: var(--surface-soft);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-input-border: var(--input-border);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-focus: var(--focus);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-poppins);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  ::selection { background: var(--accent-soft); color: var(--foreground); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+  button, select { touch-action: manipulation; }
+  input { caret-color: var(--primary); }
+  svg { flex-shrink: 0; }
+}

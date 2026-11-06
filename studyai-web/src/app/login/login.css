@@ -1,0 +1,110 @@
+﻿.login-scene {
+  background:
+    radial-gradient(ellipse at 22% 44%, light-dark(#dce3ff80, #6558d315), transparent 56%),
+    radial-gradient(ellipse at 78% 72%, light-dark(#e9e3ff70, transparent), transparent 48%),
+    var(--background);
+}
+
+.login-glass {
+  background: var(--surface-raised);
+  border: 1px solid light-dark(#ffffffeb, #c9baff24);
+  box-shadow: inset 0 1px 0 light-dark(#ffffff, #e0d7ff12), 0 22px 54px -24px light-dark(#282b4030, #00000070);
+}
+
+.login-glass input:not([type="radio"]) {
+  background: light-dark(#ffffffdb, #12121b);
+}
+
+.login-glass button:disabled {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .login-submit { opacity: 1; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .login-submit { opacity: 1; }
+}
+
+@supports (backdrop-filter: blur(20px)) {
+  .login-glass {
+    background: light-dark(#ffffffc9, color-mix(in srgb, var(--surface-raised) 91%, transparent));
+    backdrop-filter: blur(18px);
+  }
+}
+
+.study-example {
+  outline: 1px solid light-dark(transparent, var(--border));
+  outline-offset: -1px;
+}
+
+.study-example > div:first-child,
+.study-example > figcaption {
+  background: light-dark(transparent, #191822);
+}
+
+.theme-switch {
+  background: light-dark(#e8eaf280, #ffffff09);
+  border: 1px solid light-dark(#ffffffc9, #ffffff1f);
+  box-shadow: inset 0 1px 1px light-dark(#ffffff, #ffffff0d), 0 3px 12px light-dark(#28366a0a, #00000026);
+  backdrop-filter: blur(16px) saturate(150%);
+}
+
+.theme-indicator {
+  transform: translateX(200%);
+  background: linear-gradient(160deg, light-dark(#ffffffed, #ffffff1f), light-dark(#ffffff7a, #ffffff0a));
+  border: 1px solid light-dark(#ffffff, #ffffff2b);
+  box-shadow: inset 0 1px 1px light-dark(#ffffff, #ffffff26), inset 0 -1px 1px light-dark(#d6dbea70, #ffffff05), 0 3px 8px light-dark(#2738621a, #00000040);
+}
+
+:root[data-theme="light"] .theme-indicator { transform: translateX(0); }
+:root[data-theme="dark"] .theme-indicator { transform: translateX(100%); }
+
+@media (hover: hover) and (pointer: fine) {
+  .theme-switch label:hover { color: var(--foreground); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-enter { animation: materialize 360ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .theme-indicator { transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .theme-switch:has(:focus-visible) .theme-indicator { transition: none; }
+  .password-toggle { transition: transform 140ms ease-out; }
+  .password-toggle:active:not(:focus-visible) { transform: scale(0.94); }
+  @keyframes materialize {
+    from { opacity: 0.5; transform: translateY(8px) scale(0.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  ::view-transition-image-pair(root) { isolation: auto; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { mix-blend-mode: normal; display: block; }
+  ::view-transition-old(root) { animation: none; z-index: 0; }
+  ::view-transition-new(root) { animation: theme-reveal 580ms cubic-bezier(0.77, 0, 0.175, 1) both; z-index: 1; }
+  ::view-transition { pointer-events: none; }
+  @keyframes theme-reveal {
+    from { clip-path: circle(22px at var(--theme-origin-x) var(--theme-origin-y)); }
+    to { clip-path: circle(var(--theme-reveal-radius) at var(--theme-origin-x) var(--theme-origin-y)); }
+  }
+
+  :root.theme-fallback body,
+  :root.theme-fallback .login-scene,
+  :root.theme-fallback .login-scene * {
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 480ms;
+    transition-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .login-glass { background: var(--surface-raised); backdrop-filter: none; border-color: var(--input-border); }
+  .login-scene { background: var(--background); }
+  .theme-switch, .theme-indicator { background: var(--surface); backdrop-filter: none; border-color: var(--input-border); }
+  .theme-indicator { background: var(--accent-soft); }
+  .login-glass input:not([type="radio"]), .login-glass button:disabled { background: var(--surface); box-shadow: none; }
+  .login-glass button:disabled { background: var(--primary); }
+}
+
+@supports not (backdrop-filter: blur(16px)) {
+  .theme-switch { background: var(--surface-soft); }
+  .theme-indicator { background: var(--surface); }
+}
