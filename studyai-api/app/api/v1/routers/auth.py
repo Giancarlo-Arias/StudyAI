@@ -10,13 +10,18 @@ from starlette.concurrency import run_in_threadpool
 from app.api.v1.dependencies import get_current_user
 from app.core.jwt_tokens import create_access_token
 from app.repositories.auth_rate_limit_repository import allow_auth_request
-from app.repositories.user_repository import UserAlreadyExistsError
+from app.repositories.user_repository import (
+    UserAlreadyExistsError,
+    update_user_full_name,
+)
 from app.schemas.user import (
     AccessTokenResponse,
     CurrentUserResponse,
     EmailVerificationRequest,
     EmailVerificationResendRequest,
     UserLogin,
+    UserPasswordChange,
+    UserProfileUpdate,
     UserPublic,
     UserRegister,
 )
@@ -24,7 +29,11 @@ from app.schemas.user import (
 from app.services.auth_service import (
     EmailNotVerifiedError,
     InvalidCredentialsError,
+    InvalidCurrentPasswordError,
+    PasswordChangeConflictError,
+    PasswordReuseError,
     authenticate_user,
+    change_user_password,
 )
 
 from app.services.email_verification_service import (
@@ -171,7 +180,6 @@ async def resend_verification(
     }
 
 
-
 # Iniciar sesión y generar el token de acceso JWT
 @router.post(
     "/login",
@@ -267,3 +275,97 @@ async def get_my_profile(
     current_user: Annotated[dict, Depends(get_current_user)],
 ):
     return current_user
+
+
+# Actualizar el nombre completo del usuario autenticado
+@router.patch(
+    "/me",
+    response_model=CurrentUserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Actualizar perfil del usuario",
+    description="Actualiza el nombre completo del usuario autenticado.",
+    responses={
+        401: {"description": "Usuario no autorizado"},
+        422: {"description": "Nombre inválido"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def update_my_profile(
+    data: UserProfileUpdate,
+    current_user: Annotated[dict, Depends(get_current_user)],
+):
+    try:
+        # Actualizar únicamente el nombre del usuario autenticado
+        updated_user = await run_in_threadpool(
+            update_user_full_name,
+            current_user["id"],
+            data.full_name,
+        )
+
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if updated_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Usuario no autorizado",
+        )
+
+    return updated_user
+
+
+# Cambiar la contraseña del usuario autenticado
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_200_OK,
+    summary="Cambiar contraseña",
+    description="Verifica la contraseña actual y guarda la nueva mediante Argon2id.",
+    responses={
+        400: {"description": "Contraseña actual incorrecta"},
+        401: {"description": "Usuario no autorizado"},
+        409: {"description": "Contraseña reutilizada o conflicto de actualización"},
+        422: {"description": "Datos inválidos"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def change_password(
+    data: UserPasswordChange,
+    current_user: Annotated[dict, Depends(get_current_user)],
+):
+    try:
+        # Verificar la contraseña actual y actualizar el hash en PostgreSQL
+        await run_in_threadpool(
+            change_user_password,
+            current_user["id"],
+            data.current_password,
+            data.new_password,
+        )
+
+    except InvalidCurrentPasswordError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="La contraseña actual es incorrecta",
+        ) from exc
+
+    except PasswordReuseError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="La nueva contraseña debe ser diferente de la actual",
+        ) from exc
+
+    except PasswordChangeConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="No se pudo actualizar la contraseña. Intenta nuevamente",
+        ) from exc
+
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    return {"message": "Contraseña actualizada correctamente"}

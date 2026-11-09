@@ -1,5 +1,11 @@
 import "server-only";
 
+export class ApiError extends Error {
+  constructor(public readonly status: number) {
+    super(`Error en la API: HTTP ${status}`);
+  }
+}
+
 export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -23,7 +29,7 @@ export async function apiFetch<T>(
   );
 
   if (!response.ok) {
-    throw new Error(`Error en la API: HTTP ${response.status}`);
+    throw new ApiError(response.status);
   }
 
   if (response.status === 204) {

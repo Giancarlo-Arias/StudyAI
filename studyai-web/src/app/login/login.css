@@ -60,13 +60,19 @@
 :root[data-theme="light"] .theme-indicator { transform: translateX(0); }
 :root[data-theme="dark"] .theme-indicator { transform: translateX(100%); }
 
+:root[data-theme="light"] .theme-switch [data-theme-option="light"],
+:root[data-theme="dark"] .theme-switch [data-theme-option="dark"],
+:root:not([data-theme]) .theme-switch [data-theme-option="system"] {
+  color: var(--foreground);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .theme-switch label:hover { color: var(--foreground); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .login-enter { animation: materialize 360ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .theme-indicator { transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+  :root.theme-user-interaction .theme-indicator { transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
   .theme-switch:has(:focus-visible) .theme-indicator { transition: none; }
   .password-toggle { transition: transform 140ms ease-out; }
   .password-toggle:active:not(:focus-visible) { transform: scale(0.94); }
@@ -75,12 +81,11 @@
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  ::view-transition-image-pair(root) { isolation: auto; }
-  ::view-transition-old(root),
-  ::view-transition-new(root) { mix-blend-mode: normal; display: block; }
-  ::view-transition-old(root) { animation: none; z-index: 0; }
-  ::view-transition-new(root) { animation: theme-reveal 580ms cubic-bezier(0.77, 0, 0.175, 1) both; z-index: 1; }
-  ::view-transition { pointer-events: none; }
+  :root.theme-view-transition::view-transition-image-pair(root) { isolation: auto; }
+  :root.theme-view-transition::view-transition-old(root),
+  :root.theme-view-transition::view-transition-new(root) { mix-blend-mode: normal; display: block; }
+  :root.theme-view-transition::view-transition-old(root) { animation: none; z-index: 0; }
+  :root.theme-view-transition::view-transition-new(root) { animation: theme-reveal 580ms cubic-bezier(0.77, 0, 0.175, 1) both; z-index: 1; }
   @keyframes theme-reveal {
     from { clip-path: circle(22px at var(--theme-origin-x) var(--theme-origin-y)); }
     to { clip-path: circle(var(--theme-reveal-radius) at var(--theme-origin-x) var(--theme-origin-y)); }

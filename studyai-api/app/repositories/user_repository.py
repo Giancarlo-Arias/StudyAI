@@ -71,3 +71,32 @@ def create_user(
             ) from exc
 
         raise
+
+
+
+def update_user_full_name(user_id: int, full_name: str) -> dict | None:
+    with get_engine().begin() as connection:
+        result = connection.execute(
+            text("""
+                UPDATE users
+                SET
+                    full_name = BTRIM(:full_name),
+                    updated_at = NOW()
+                WHERE id = :user_id
+                RETURNING
+                    id,
+                    full_name,
+                    email,
+                    is_active,
+                    email_verified_at,
+                    created_at,
+                    updated_at;
+            """),
+            {
+                "user_id": user_id,
+                "full_name": full_name,
+            },
+        )
+
+        user = result.mappings().one_or_none()
+        return dict(user) if user is not None else None

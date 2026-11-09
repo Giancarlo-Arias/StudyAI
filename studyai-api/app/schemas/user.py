@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 # Datos que recibiremos al registrar un usuario
@@ -23,7 +23,7 @@ class UserRegister(BaseModel):
     def normalize_email(cls, value: str) -> str:
         return value.strip().lower()
 
-    
+
 # Datos públicos devueltos por la API
 class UserPublic(BaseModel):
     id: int
@@ -35,12 +35,32 @@ class UserPublic(BaseModel):
     updated_at: datetime
 
 
+class UserProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    full_name: str = Field(min_length=2, max_length=150)
+
+    @field_validator("full_name", mode="before")
+    @classmethod
+    def normalize_full_name(cls, value: str) -> str:
+        if isinstance(value, str):
+            return " ".join(value.split())
+        return value
+
+
+class UserPasswordChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
+
+
 class EmailVerificationRequest(BaseModel):
     token: str = Field(min_length=1, max_length=256)
 
 
 class EmailVerificationResendRequest(BaseModel):
-    email: EmailStr   
+    email: EmailStr
 
 
 class UserLogin(BaseModel):
@@ -51,6 +71,7 @@ class UserLogin(BaseModel):
 class AccessTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
 
 class CurrentUserResponse(BaseModel):
     id: int

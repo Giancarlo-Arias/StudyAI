@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import type { DashboardResponse } from "@/types/dashboard";
 
 export async function getDashboardData(): Promise<DashboardResponse> {
@@ -10,10 +10,18 @@ export async function getDashboardData(): Promise<DashboardResponse> {
 
   if (!token) redirect("/login");
 
-  return apiFetch<DashboardResponse>("dashboard", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  try {
+    return await apiFetch<DashboardResponse>("dashboard", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      redirect("/login");
+    }
+
+    throw error;
+  }
 }

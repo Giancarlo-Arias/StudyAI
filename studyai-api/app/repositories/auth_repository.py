@@ -44,3 +44,51 @@ def get_user_for_access(user_id: int) -> dict | None:
         ).mappings().one_or_none()
 
         return dict(user) if user else None
+
+
+def get_user_password_hash(user_id: int) -> str | None:
+    """Obtener el hash de contraseña del usuario autenticado."""
+
+    with get_engine().connect() as connection:
+        password_hash = connection.execute(
+            text("""
+                SELECT password_hash
+                FROM users
+                WHERE id = :user_id
+                  AND is_active = TRUE
+                  AND email_verified_at IS NOT NULL;
+            """),
+            {"user_id": user_id},
+        ).scalar_one_or_none()
+
+        return password_hash
+
+
+def update_user_password_hash(
+    user_id: int,
+    current_hash: str,
+    new_hash: str,
+) -> bool:
+    """Actualizar el hash si la contraseña anterior no ha cambiado."""
+
+    with get_engine().begin() as connection:
+        result = connection.execute(
+            text("""
+                UPDATE users
+                SET
+                    password_hash = :new_hash,
+                    updated_at = NOW()
+                WHERE id = :user_id
+                  AND password_hash = :current_hash
+                  AND is_active = TRUE
+                  AND email_verified_at IS NOT NULL
+                RETURNING id;
+            """),
+            {
+                "user_id": user_id,
+                "current_hash": current_hash,
+                "new_hash": new_hash,
+            },
+        )
+
+        return result.scalar_one_or_none() is not None

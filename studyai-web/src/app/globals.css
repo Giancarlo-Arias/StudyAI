@@ -40,9 +40,92 @@
 }
 
 @layer base {
+  html { background-color: var(--background); }
   ::selection { background: var(--accent-soft); color: var(--foreground); }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
   button, select { touch-action: manipulation; }
   input { caret-color: var(--primary); }
   svg { flex-shrink: 0; }
+}
+
+::view-transition { pointer-events: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(.login-exit) {
+    animation: login-exit 160ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  ::view-transition-new(.dashboard-enter) {
+    animation: dashboard-enter 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  ::view-transition-old(.document-content) {
+    animation: document-content-out 120ms ease-out both;
+  }
+
+  ::view-transition-new(.document-content) {
+    animation: document-content-in 200ms ease-out both;
+  }
+
+  ::view-transition-group(.loading-reveal) {
+    animation-duration: 120ms;
+  }
+
+  ::view-transition-old(.loading-reveal) {
+    animation: document-content-out 80ms ease-out both;
+  }
+
+  ::view-transition-new(.loading-reveal) {
+    animation: document-content-in 120ms ease-out both;
+  }
+
+  @keyframes login-exit {
+    to { opacity: 0; transform: translateY(-4px); }
+  }
+
+  @keyframes dashboard-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes document-content-out {
+    to { opacity: 0; }
+  }
+
+  @keyframes document-content-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.login-exit),
+  ::view-transition-group(.dashboard-enter),
+  ::view-transition-group(.document-content),
+  ::view-transition-group(.loading-reveal),
+  ::view-transition-old(.login-exit),
+  ::view-transition-new(.dashboard-enter),
+  ::view-transition-old(.document-content),
+  ::view-transition-new(.document-content) { animation: none; }
+  ::view-transition-old(.loading-reveal),
+  ::view-transition-new(.loading-reveal) { animation: none; }
+}
+
+.dashboard-shell :is(nav, main) {
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+}
+
+@media (min-width: 40rem) {
+  .dashboard-shell :is(nav, main) {
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+}
+
+@media (min-width: 64rem) {
+  .dashboard-shell :is(nav, main) {
+    padding-left: max(3rem, env(safe-area-inset-left));
+    padding-right: max(3rem, env(safe-area-inset-right));
+  }
 }
