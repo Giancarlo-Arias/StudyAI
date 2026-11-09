@@ -8,11 +8,16 @@ from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
 from app.api.v1.dependencies import get_current_user
+from app.core.config import get_settings
 from app.core.jwt_tokens import create_access_token
 from app.repositories.auth_rate_limit_repository import allow_auth_request
 from app.repositories.user_repository import (
     UserAlreadyExistsError,
     update_user_full_name,
+)
+from app.schemas.password_reset import (
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from app.schemas.user import (
     AccessTokenResponse,
@@ -39,6 +44,10 @@ from app.services.auth_service import (
 from app.services.email_verification_service import (
     resend_verification_email,
     verify_user_email,
+)
+from app.services.password_reset_service import (
+    request_password_reset,
+    reset_user_password,
 )
 from app.services.registration_email_service import register_and_send_verification
 
@@ -178,6 +187,133 @@ async def resend_verification(
             "recibirás un correo con instrucciones"
         )
     }
+
+
+# Solicitar o reenviar un enlace para recuperar la contraseña
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_200_OK,
+    summary="Solicitar recuperación de contraseña",
+    description="Envía un enlace temporal si existe una cuenta activa con ese correo.",
+    responses={
+        422: {"description": "Datos inválidos"},
+        429: {"description": "Límite de solicitudes alcanzado"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def forgot_password(data: ForgotPasswordRequest, request: Request):
+    """Solicitar o reenviar un enlace sin revelar si la cuenta existe."""
+
+    client_ip = request.client.host if request.client else None
+
+    if client_ip is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        )
+
+    # Comprobar el límite por IP antes de consultar el correo.
+    try:
+        allowed = await run_in_threadpool(
+            allow_auth_request,
+            client_ip,
+            "forgot_password",
+        )
+
+    except (SQLAlchemyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiadas solicitudes. Intenta más tarde",
+        )
+
+    # El intervalo de 60 segundos por cuenta se valida en PostgreSQL.
+    # No revelar si el correo existe, está verificado o puede recibir mensajes.
+    try:
+        await request_password_reset(
+            str(data.email),
+            get_settings().password_reset_url,
+        )
+
+    except (SQLAlchemyError, ResendError, httpx.RequestError, ValueError, OSError):
+        logger.exception("Error al procesar la recuperación de contraseña")
+
+    return {
+        "message": (
+            "Si el correo está registrado, recibirás instrucciones "
+            "para recuperar tu contraseña"
+        )
+    }
+
+
+# Restablecer la contraseña mediante un enlace de un solo uso
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_200_OK,
+    summary="Restablecer contraseña",
+    description="Consume un token válido y actualiza la contraseña mediante Argon2id.",
+    responses={
+        400: {"description": "Token inválido, vencido o utilizado"},
+        422: {"description": "Datos inválidos"},
+        429: {"description": "Límite de solicitudes alcanzado"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def reset_password(data: ResetPasswordRequest, request: Request):
+    """Cambiar la contraseña sin conocer la anterior usando un token válido."""
+
+    client_ip = request.client.host if request.client else None
+
+    if client_ip is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        )
+
+    # Limitar por IP los intentos de uso de tokens.
+    try:
+        allowed = await run_in_threadpool(
+            allow_auth_request,
+            client_ip,
+            "reset_password",
+        )
+
+    except (SQLAlchemyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos. Intenta más tarde",
+        )
+
+    try:
+        updated = await reset_user_password(
+            data.token,
+            data.new_password,
+        )
+
+    except (SQLAlchemyError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not updated:
+        raise HTTPException(
+            status_code=400,
+            detail="El enlace es inválido, venció o ya fue utilizado",
+        )
+
+    return {"message": "Contraseña restablecida correctamente"}
 
 
 # Iniciar sesión y generar el token de acceso JWT

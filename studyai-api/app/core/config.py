@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = ""
     email_verification_url: str = ""
+    password_reset_url: str = ""
 
     # JWT configuration
     jwt_secret_key: str = ""

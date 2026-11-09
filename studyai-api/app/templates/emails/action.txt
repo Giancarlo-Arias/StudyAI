@@ -1,0 +1,15 @@
+StudyAI
+Tu espacio de aprendizaje inteligente
+
+$title
+
+$description
+
+$button_label:
+$action_url
+
+$expiration_notice
+
+$security_notice
+
+Este mensaje fue enviado automáticamente por StudyAI.

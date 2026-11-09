@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -494,14 +495,12 @@ export function LoginForm() {
       )}
 
       <div className="mt-4 text-right text-sm">
-        <span
-          role="link"
-          aria-disabled="true"
-          aria-describedby="unavailable"
-          className="cursor-not-allowed text-muted"
+        <Link
+          href="/forgot-password"
+          className="inline-flex min-h-11 items-center justify-center rounded-md font-medium text-primary transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
         >
           ¿Olvidaste tu contraseña?
-        </span>
+        </Link>
       </div>
 
       <button
@@ -543,7 +542,7 @@ export function LoginForm() {
         id="unavailable"
         className="mt-5 text-center text-xs leading-5 text-muted"
       >
-        Registro y recuperación disponibles próximamente.
+        El registro de nuevas cuentas estará disponible próximamente.
       </p>
     </form>
   );
