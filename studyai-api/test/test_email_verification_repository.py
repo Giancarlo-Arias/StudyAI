@@ -3,7 +3,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import create_engine, text
 
-from app.core.security import generate_email_verification_token
+from app.core.security import hash_email_verification_code
 from app.db.connection import get_engine
 from app.repositories import email_verification_repository
 
@@ -29,6 +29,7 @@ def verification_user(monkeypatch):
     )
 
     email = f"verification-{uuid4().hex}@example.com"
+    user_id = None
 
     try:
         with test_engine.begin() as connection:
@@ -49,37 +50,52 @@ def verification_user(monkeypatch):
                 {"email": email},
             ).scalar_one()
 
-        yield user_id, test_engine
+        yield user_id, email, test_engine
 
     finally:
-        if "user_id" in locals():
+        if user_id is not None:
             with test_engine.begin() as connection:
                 connection.execute(
-                    text("DELETE FROM users WHERE id = :user_id"),
+                    text("""
+                        DELETE FROM email_verification_tokens
+                        WHERE user_id = :user_id;
+                    """),
+                    {"user_id": user_id},
+                )
+
+                connection.execute(
+                    text("""
+                        DELETE FROM users
+                        WHERE id = :user_id;
+                    """),
                     {"user_id": user_id},
                 )
 
         test_engine.dispose()
 
 
-def test_save_and_replace_token(verification_user):
-    user_id, engine = verification_user
+def test_save_and_replace_code(verification_user):
+    """Guardar un código y reemplazarlo por otro."""
 
-    _, first_hash = generate_email_verification_token()
-    _, second_hash = generate_email_verification_token()
+    user_id, email, engine = verification_user
+
+    first_hash = hash_email_verification_code(email, "123456")
+    second_hash = hash_email_verification_code(email, "654321")
 
     email_verification_repository.save_email_verification_token(
-        user_id, first_hash
+        user_id,
+        first_hash,
     )
 
     email_verification_repository.save_email_verification_token(
-        user_id, second_hash
+        user_id,
+        second_hash,
     )
 
     with engine.connect() as connection:
         rows = connection.execute(
             text("""
-                SELECT token_hash
+                SELECT token_hash, failed_attempts
                 FROM email_verification_tokens
                 WHERE user_id = :user_id;
             """),
@@ -88,15 +104,19 @@ def test_save_and_replace_token(verification_user):
 
     assert len(rows) == 1
     assert rows[0]["token_hash"] == second_hash
+    assert rows[0]["failed_attempts"] == 0
 
 
-def test_delete_token(verification_user):
-    user_id, _ = verification_user
+def test_delete_code(verification_user):
+    """Eliminar un código pendiente."""
 
-    _, token_hash = generate_email_verification_token()
+    user_id, email, _ = verification_user
+
+    code_hash = hash_email_verification_code(email, "123456")
 
     email_verification_repository.save_email_verification_token(
-        user_id, token_hash
+        user_id,
+        code_hash,
     )
 
     deleted = email_verification_repository.delete_email_verification_token(
@@ -104,19 +124,23 @@ def test_delete_token(verification_user):
     )
 
     assert deleted is True
+
     assert (
         email_verification_repository.delete_email_verification_token(user_id)
         is False
     )
 
 
-def test_delete_expired_tokens(verification_user):
-    user_id, engine = verification_user
+def test_delete_expired_codes(verification_user):
+    """Eliminar códigos cuya fecha de expiración terminó."""
 
-    _, token_hash = generate_email_verification_token()
+    user_id, email, engine = verification_user
+
+    code_hash = hash_email_verification_code(email, "123456")
 
     email_verification_repository.save_email_verification_token(
-        user_id, token_hash
+        user_id,
+        code_hash,
     )
 
     with engine.begin() as connection:
@@ -146,17 +170,22 @@ def test_delete_expired_tokens(verification_user):
     assert deleted_count >= 1
     assert remaining == 0
 
-def test_verify_email_token(verification_user):
-    user_id, engine = verification_user
 
-    _, token_hash = generate_email_verification_token()
+def test_verify_email_code(verification_user):
+    """Verificar el correo y consumir el código correctamente."""
+
+    user_id, email, engine = verification_user
+
+    code_hash = hash_email_verification_code(email, "123456")
 
     email_verification_repository.save_email_verification_token(
-        user_id, token_hash
+        user_id,
+        code_hash,
     )
 
-    verified = email_verification_repository.verify_email_verification_token(
-        token_hash
+    verified = email_verification_repository.verify_email_verification_code(
+        email,
+        code_hash,
     )
 
     with engine.connect() as connection:
@@ -169,7 +198,7 @@ def test_verify_email_token(verification_user):
             {"user_id": user_id},
         ).mappings().one()
 
-        remaining_tokens = connection.execute(
+        remaining_codes = connection.execute(
             text("""
                 SELECT COUNT(*)
                 FROM email_verification_tokens
@@ -180,27 +209,32 @@ def test_verify_email_token(verification_user):
 
     assert verified is True
     assert user["email_verified_at"] is not None
-    assert remaining_tokens == 0
+    assert remaining_codes == 0
 
 
-def test_cannot_reuse_email_token(verification_user):
-    user_id, _ = verification_user
+def test_cannot_reuse_email_code(verification_user):
+    """Impedir que un código se utilice dos veces."""
 
-    _, token_hash = generate_email_verification_token()
+    user_id, email, _ = verification_user
+
+    code_hash = hash_email_verification_code(email, "123456")
 
     email_verification_repository.save_email_verification_token(
-        user_id, token_hash
+        user_id,
+        code_hash,
     )
 
     first_attempt = (
-        email_verification_repository.verify_email_verification_token(
-            token_hash
+        email_verification_repository.verify_email_verification_code(
+            email,
+            code_hash,
         )
     )
 
     second_attempt = (
-        email_verification_repository.verify_email_verification_token(
-            token_hash
+        email_verification_repository.verify_email_verification_code(
+            email,
+            code_hash,
         )
     )
 
@@ -208,16 +242,19 @@ def test_cannot_reuse_email_token(verification_user):
     assert second_attempt is False
 
 
-def test_cannot_verify_expired_email_token(verification_user):
-    user_id, engine = verification_user
+def test_cannot_verify_expired_email_code(verification_user):
+    """Rechazar un código que haya vencido."""
 
-    _, token_hash = generate_email_verification_token()
+    user_id, email, engine = verification_user
+
+    code_hash = hash_email_verification_code(email, "123456")
 
     email_verification_repository.save_email_verification_token(
-        user_id, token_hash
+        user_id,
+        code_hash,
     )
 
-    # Simular que el token ya venció.
+    # Simular que el código ya venció.
     with engine.begin() as connection:
         connection.execute(
             text("""
@@ -228,8 +265,9 @@ def test_cannot_verify_expired_email_token(verification_user):
             {"user_id": user_id},
         )
 
-    verified = email_verification_repository.verify_email_verification_token(
-        token_hash
+    verified = email_verification_repository.verify_email_verification_code(
+        email,
+        code_hash,
     )
 
     with engine.connect() as connection:

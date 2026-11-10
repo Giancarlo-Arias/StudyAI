@@ -23,7 +23,6 @@ from app.schemas.user import (
     AccessTokenResponse,
     CurrentUserResponse,
     EmailVerificationCodeRequest,
-    EmailVerificationRequest,
     EmailVerificationResendRequest,
     UserLogin,
     UserPasswordChange,
@@ -31,7 +30,6 @@ from app.schemas.user import (
     UserPublic,
     UserRegister,
 )
-
 from app.services.auth_service import (
     EmailNotVerifiedError,
     InvalidCredentialsError,
@@ -41,11 +39,8 @@ from app.services.auth_service import (
     authenticate_user,
     change_user_password,
 )
-
 from app.services.email_verification_service import (
     resend_verification_code_email,
-    resend_verification_email,
-    verify_user_email,
     verify_user_email_code,
 )
 from app.services.password_reset_service import (
@@ -86,52 +81,18 @@ async def register(data: UserRegister):
         # El índice UNIQUE detectó un correo duplicado
         raise HTTPException(
             status_code=409,
-            detail="Ya existe una cuenta con ese correo"
+            detail="Ya existe una cuenta con ese correo",
         ) from exc
 
     except SQLAlchemyError as exc:
         # Evitar exponer información interna de PostgreSQL
         raise HTTPException(
             status_code=500,
-            detail="Error interno al registrar el usuario"
+            detail="Error interno al registrar el usuario",
         ) from exc
 
     # FastAPI filtra la respuesta usando UserPublic
     return user
-
-
-# Verificar el correo electrónico mediante un token
-@router.post(
-    "/verify-email",
-    status_code=status.HTTP_200_OK,
-    summary="Verificar correo electrónico",
-    responses={
-        400: {"description": "Token inválido, vencido o utilizado"},
-        422: {"description": "Datos inválidos"},
-        500: {"description": "Error interno"},
-    },
-)
-async def verify_email(data: EmailVerificationRequest):
-
-    try:
-        verified = await run_in_threadpool(
-            verify_user_email,
-            data.token,
-        )
-
-    except SQLAlchemyError as exc:
-        raise HTTPException(
-            status_code=500,
-            detail="Error interno al verificar el correo",
-        ) from exc
-
-    if not verified:
-        raise HTTPException(
-            status_code=400,
-            detail="Token inválido, vencido o utilizado",
-        )
-
-    return {"message": "Correo verificado correctamente"}
 
 
 # Verificar el correo electrónico mediante un código de seis dígitos
@@ -203,66 +164,6 @@ async def verify_email_code(
         )
 
     return {"message": "Correo verificado correctamente"}
-
-
-# Reenviar el correo de verificación
-@router.post(
-    "/resend-verification",
-    status_code=status.HTTP_200_OK,
-    summary="Reenviar correo de verificación",
-    responses={
-        429: {"description": "Límite de solicitudes alcanzado"},
-        422: {"description": "Datos inválidos"},
-        503: {"description": "Servicio temporalmente no disponible"},
-    },
-)
-async def resend_verification(
-    data: EmailVerificationResendRequest,
-    request: Request,
-):
-    """Reenviar la verificación aplicando el límite por IP."""
-
-    client_ip = request.client.host if request.client else None
-
-    if client_ip is None:
-        raise HTTPException(
-            status_code=503,
-            detail="No se pudo procesar la solicitud",
-        )
-
-    # Comprobar el límite por IP antes de acceder a la cuenta.
-    try:
-        allowed = await run_in_threadpool(
-            allow_auth_request,
-            client_ip,
-            "resend_verification",
-        )
-
-    except (SQLAlchemyError, ValueError) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="No se pudo procesar la solicitud",
-        ) from exc
-
-    if not allowed:
-        raise HTTPException(
-            status_code=429,
-            detail="Demasiadas solicitudes. Intenta más tarde",
-        )
-
-    # No revelar si el correo existe o está verificado.
-    try:
-        await resend_verification_email(str(data.email))
-
-    except (SQLAlchemyError, ResendError, httpx.RequestError):
-        logger.exception("Error al procesar el reenvío de verificación")
-
-    return {
-        "message": (
-            "Si la cuenta está pendiente de verificación, "
-            "recibirás un correo con instrucciones"
-        )
-    }
 
 
 # Reenviar un código numérico de verificación
@@ -484,6 +385,7 @@ async def login(data: UserLogin, request: Request):
             client_ip,
             "login",
         )
+
     except (SQLAlchemyError, ValueError) as exc:
         raise HTTPException(
             status_code=503,
@@ -524,6 +426,7 @@ async def login(data: UserLogin, request: Request):
 
     try:
         access_token = create_access_token(user["id"])
+
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(
             status_code=503,
@@ -569,7 +472,7 @@ async def update_my_profile(
     current_user: Annotated[dict, Depends(get_current_user)],
 ):
     try:
-        # Actualizar únicamente el nombre del usuario autenticado
+        # Actualizar únicamente el nombre del usuario autenticado.
         updated_user = await run_in_threadpool(
             update_user_full_name,
             current_user["id"],
@@ -610,7 +513,7 @@ async def change_password(
     current_user: Annotated[dict, Depends(get_current_user)],
 ):
     try:
-        # Verificar la contraseña actual y actualizar el hash en PostgreSQL
+        # Verificar la contraseña actual y actualizar el hash en PostgreSQL.
         await run_in_threadpool(
             change_user_password,
             current_user["id"],

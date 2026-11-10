@@ -55,10 +55,6 @@ class UserPasswordChange(BaseModel):
     new_password: str = Field(min_length=12, max_length=128)
 
 
-class EmailVerificationRequest(BaseModel):
-    token: str = Field(min_length=1, max_length=256)
-
-
 # Datos para verificar el correo con un código de seis dígitos
 class EmailVerificationCodeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")

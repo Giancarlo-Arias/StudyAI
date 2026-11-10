@@ -15,12 +15,12 @@ def configure_test(monkeypatch):
     def fake_register(data):
         return (
             {"id": 1, "email": str(data.email)},
-            "token-de-prueba",
+            "004281",
         )
 
     monkeypatch.setattr(
         registration_email_service,
-        "register_user_with_verification",
+        "register_user_with_code_verification",
         fake_register,
     )
 
@@ -30,7 +30,6 @@ def configure_test(monkeypatch):
         lambda: SimpleNamespace(
             resend_api_key="re_test",
             resend_from_email="StudyAI <onboarding@resend.dev>",
-            email_verification_url="http://localhost:5173/verify-email",
         ),
     )
 
@@ -43,7 +42,9 @@ def create_test_user():
     )
 
 
-def test_registration_sends_email(monkeypatch):
+def test_registration_sends_code_email(monkeypatch):
+    """Enviar el código de seis dígitos sin devolverlo al cliente."""
+
     configure_test(monkeypatch)
     sent_emails = []
 
@@ -52,12 +53,12 @@ def test_registration_sends_email(monkeypatch):
 
     monkeypatch.setattr(
         registration_email_service,
-        "send_verification_email",
+        "send_verification_code_email",
         fake_send,
     )
 
     user = asyncio.run(
-        registration_email_service.register_and_send_verification(
+        registration_email_service.register_and_send_code_verification(
             create_test_user()
         )
     )
@@ -65,11 +66,15 @@ def test_registration_sends_email(monkeypatch):
     assert user["id"] == 1
     assert len(sent_emails) == 1
     assert sent_emails[0]["to_email"] == "usuario@example.com"
-    assert sent_emails[0]["token"] == "token-de-prueba"
-    assert "token" not in user
+    assert sent_emails[0]["code"] == "004281"
+
+    # Nunca exponer el código en los datos públicos.
+    assert "code" not in user
 
 
 def test_registration_preserves_user_if_email_fails(monkeypatch):
+    """Conservar al usuario si Resend no consigue enviar el código."""
+
     configure_test(monkeypatch)
 
     async def fake_send(**kwargs):
@@ -77,12 +82,12 @@ def test_registration_preserves_user_if_email_fails(monkeypatch):
 
     monkeypatch.setattr(
         registration_email_service,
-        "send_verification_email",
+        "send_verification_code_email",
         fake_send,
     )
 
     user = asyncio.run(
-        registration_email_service.register_and_send_verification(
+        registration_email_service.register_and_send_code_verification(
             create_test_user()
         )
     )
@@ -92,6 +97,8 @@ def test_registration_preserves_user_if_email_fails(monkeypatch):
 
 
 def test_registration_does_not_send_if_database_fails(monkeypatch):
+    """No enviar códigos cuando PostgreSQL falla durante el registro."""
+
     def fake_register(data):
         raise SQLAlchemyError("Error de PostgreSQL")
 
@@ -100,19 +107,19 @@ def test_registration_does_not_send_if_database_fails(monkeypatch):
 
     monkeypatch.setattr(
         registration_email_service,
-        "register_user_with_verification",
+        "register_user_with_code_verification",
         fake_register,
     )
 
     monkeypatch.setattr(
         registration_email_service,
-        "send_verification_email",
+        "send_verification_code_email",
         fake_send,
     )
 
     with pytest.raises(SQLAlchemyError):
         asyncio.run(
-            registration_email_service.register_and_send_verification(
+            registration_email_service.register_and_send_code_verification(
                 create_test_user()
             )
         )

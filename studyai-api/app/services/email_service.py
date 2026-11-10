@@ -33,21 +33,6 @@ def _build_token_link(page_url: str, token: str) -> str:
     return f"{page_url}?{query}"
 
 
-def build_verification_link(verification_page_url: str, token: str) -> str:
-    """Construir el enlace de verificación del correo."""
-
-    try:
-        return _build_token_link(
-            verification_page_url,
-            token,
-        )
-
-    except ValueError as exc:
-        raise ValueError(
-            "URL de verificación inválida"
-        ) from exc
-
-
 def build_password_reset_link(reset_page_url: str, token: str) -> str:
     """Construir el enlace para recuperar la contraseña."""
 
@@ -168,45 +153,6 @@ async def _send_action_email(
         "text": plain_text,
         "html": html,
     })
-
-
-async def send_verification_email(
-    to_email: str,
-    token: str,
-    *,
-    api_key: str,
-    sender_email: str,
-    verification_page_url: str,
-) -> None:
-    """Enviar el enlace de verificación mediante Resend."""
-
-    verification_link = build_verification_link(
-        verification_page_url,
-        token,
-    )
-
-    await _send_action_email(
-        to_email=to_email,
-        subject="Verifica tu correo electrónico - StudyAI",
-        api_key=api_key,
-        sender_email=sender_email,
-        preheader="Confirma tu correo para activar tu cuenta de StudyAI.",
-        title="Confirma tu correo electrónico",
-        description=(
-            "¡Tu cuenta está casi lista! Confirma tu dirección "
-            "de correo electrónico para comenzar a estudiar "
-            "con StudyAI."
-        ),
-        button_label="Verificar mi correo",
-        action_url=verification_link,
-        expiration_notice=(
-            "Por seguridad, este enlace vence en 5 minutos."
-        ),
-        security_notice=(
-            "Si no creaste una cuenta en StudyAI, "
-            "puedes ignorar este mensaje."
-        ),
-    )
 
 
 async def send_password_reset_email(
