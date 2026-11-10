@@ -1,4 +1,5 @@
-from functools import lru_cache
+import re
+
 from html import escape
 from pathlib import Path
 from string import Template
@@ -35,10 +36,16 @@ def _build_token_link(page_url: str, token: str) -> str:
 def build_verification_link(verification_page_url: str, token: str) -> str:
     """Construir el enlace de verificación del correo."""
 
-    return _build_token_link(
-        verification_page_url,
-        token,
-    )
+    try:
+        return _build_token_link(
+            verification_page_url,
+            token,
+        )
+
+    except ValueError as exc:
+        raise ValueError(
+            "URL de verificación inválida"
+        ) from exc
 
 
 def build_password_reset_link(reset_page_url: str, token: str) -> str:
@@ -91,6 +98,34 @@ def _render_email(
 
     html = html_template.substitute(safe_values)
     plain_text = text_template.substitute(values)
+
+    return html, plain_text
+
+
+def _render_verification_code_email(
+    code: str,
+) -> tuple[str, str]:
+    """Generar el HTML y texto del correo con código de verificación."""
+
+    html_template = Template(
+        (TEMPLATES_DIR / "verification_code.html").read_text(
+            encoding="utf-8",
+        )
+    )
+
+    text_template = Template(
+        (TEMPLATES_DIR / "verification_code.txt").read_text(
+            encoding="utf-8",
+        )
+    )
+
+    html = html_template.substitute(
+        code=escape(code, quote=True),
+    )
+
+    plain_text = text_template.substitute(
+        code=code,
+    )
 
     return html, plain_text
 
@@ -214,3 +249,35 @@ async def send_password_reset_email(
             "seguirá funcionando."
         ),
     )
+
+
+async def send_verification_code_email(
+    to_email: str,
+    code: str,
+    *,
+    api_key: str,
+    sender_email: str,
+) -> None:
+    """Enviar un código de verificación de seis dígitos mediante Resend."""
+
+    # Validar que el código contenga exactamente seis dígitos.
+    if not re.fullmatch(r"[0-9]{6}", code):
+        raise ValueError("Código de verificación inválido")
+
+    if not api_key or not sender_email:
+        raise ValueError("Configuración de correo incompleta")
+
+    # Obtener el HTML y texto desde templates independientes.
+    html, plain_text = _render_verification_code_email(
+        code,
+    )
+
+    resend.api_key = api_key
+
+    await resend.Emails.send_async({
+        "from": sender_email,
+        "to": [to_email],
+        "subject": "Tu código de verificación - StudyAI",
+        "text": plain_text,
+        "html": html,
+    })

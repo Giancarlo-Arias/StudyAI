@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     resend_from_email: str = ""
     email_verification_url: str = ""
     password_reset_url: str = ""
+    email_verification_code_secret: str = ""
 
     # JWT configuration
     jwt_secret_key: str = ""

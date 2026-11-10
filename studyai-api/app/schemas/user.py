@@ -59,6 +59,23 @@ class EmailVerificationRequest(BaseModel):
     token: str = Field(min_length=1, max_length=256)
 
 
+# Datos para verificar el correo con un código de seis dígitos
+class EmailVerificationCodeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+    code: str = Field(
+        min_length=6,
+        max_length=6,
+        pattern=r"^[0-9]{6}$",
+    )
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
 class EmailVerificationResendRequest(BaseModel):
     email: EmailStr
 

@@ -22,6 +22,7 @@ from app.schemas.password_reset import (
 from app.schemas.user import (
     AccessTokenResponse,
     CurrentUserResponse,
+    EmailVerificationCodeRequest,
     EmailVerificationRequest,
     EmailVerificationResendRequest,
     UserLogin,
@@ -42,14 +43,18 @@ from app.services.auth_service import (
 )
 
 from app.services.email_verification_service import (
+    resend_verification_code_email,
     resend_verification_email,
     verify_user_email,
+    verify_user_email_code,
 )
 from app.services.password_reset_service import (
     request_password_reset,
     reset_user_password,
 )
-from app.services.registration_email_service import register_and_send_verification
+from app.services.registration_email_service import (
+    register_and_send_code_verification,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +79,8 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 async def register(data: UserRegister):
 
     try:
-        # Registrar el usuario y enviar su correo de verificación
-        user = await register_and_send_verification(data)
+        # Registrar el usuario y enviar su código de verificación
+        user = await register_and_send_code_verification(data)
 
     except UserAlreadyExistsError as exc:
         # El índice UNIQUE detectó un correo duplicado
@@ -124,6 +129,77 @@ async def verify_email(data: EmailVerificationRequest):
         raise HTTPException(
             status_code=400,
             detail="Token inválido, vencido o utilizado",
+        )
+
+    return {"message": "Correo verificado correctamente"}
+
+
+# Verificar el correo electrónico mediante un código de seis dígitos
+@router.post(
+    "/verify-email-code",
+    status_code=status.HTTP_200_OK,
+    summary="Verificar correo con código",
+    description="Verifica el correo usando un código numérico de seis dígitos.",
+    responses={
+        400: {"description": "Código incorrecto, vencido o utilizado"},
+        422: {"description": "Correo o código inválido"},
+        429: {"description": "Límite de solicitudes alcanzado"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def verify_email_code(
+    data: EmailVerificationCodeRequest,
+    request: Request,
+):
+    """Validar el código y activar el correo del usuario."""
+
+    client_ip = request.client.host if request.client else None
+
+    if client_ip is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        )
+
+    # Limitar los intentos por IP antes de consultar PostgreSQL.
+    try:
+        allowed = await run_in_threadpool(
+            allow_auth_request,
+            client_ip,
+            "verify_email_code",
+        )
+
+    except (SQLAlchemyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos. Intenta más tarde",
+        )
+
+    try:
+        # PostgreSQL controla los cinco intentos por código,
+        # la expiración y el consumo en una sola transacción.
+        verified = await run_in_threadpool(
+            verify_user_email_code,
+            str(data.email),
+            data.code,
+        )
+
+    except (SQLAlchemyError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Código incorrecto, vencido o sin intentos disponibles",
         )
 
     return {"message": "Correo verificado correctamente"}
@@ -185,6 +261,68 @@ async def resend_verification(
         "message": (
             "Si la cuenta está pendiente de verificación, "
             "recibirás un correo con instrucciones"
+        )
+    }
+
+
+# Reenviar un código numérico de verificación
+@router.post(
+    "/resend-verification-code",
+    status_code=status.HTTP_200_OK,
+    summary="Reenviar código de verificación",
+    description="Solicita otro código respetando el límite de reenvíos.",
+    responses={
+        422: {"description": "Correo inválido"},
+        429: {"description": "Límite de solicitudes alcanzado"},
+        503: {"description": "Servicio temporalmente no disponible"},
+    },
+)
+async def resend_verification_code(
+    data: EmailVerificationResendRequest,
+    request: Request,
+):
+    """Solicitar otro código sin revelar información sobre la cuenta."""
+
+    client_ip = request.client.host if request.client else None
+
+    if client_ip is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        )
+
+    # Comprobar el límite por IP antes de consultar el correo.
+    try:
+        allowed = await run_in_threadpool(
+            allow_auth_request,
+            client_ip,
+            "resend_verification_code",
+        )
+
+    except (SQLAlchemyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio temporalmente no disponible",
+        ) from exc
+
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiadas solicitudes. Intenta más tarde",
+        )
+
+    # PostgreSQL exige esperar al menos 60 segundos.
+    # La respuesta no revela si existe la cuenta o si se envió el correo.
+    try:
+        await resend_verification_code_email(str(data.email))
+
+    except (SQLAlchemyError, ResendError, httpx.RequestError, ValueError, OSError):
+        logger.exception("Error al procesar el reenvío del código")
+
+    return {
+        "message": (
+            "Si la cuenta está pendiente de verificación, "
+            "recibirás un código por correo electrónico"
         )
     }
 

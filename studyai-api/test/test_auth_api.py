@@ -36,7 +36,7 @@ def test_register_user_success(monkeypatch):
     })
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_and_send_verification",
+        "app.api.v1.routers.auth.register_and_send_code_verification",
         mock_register
     )
 
@@ -54,9 +54,10 @@ def test_register_user_success(monkeypatch):
     assert data["email"] == "giancarlo@example.com"
     assert data["email_verified_at"] is None
 
-    # Nunca devolver contraseñas ni hashes
+    # Nunca devolver contraseñas, hashes ni códigos de verificación
     assert "password" not in data
     assert "password_hash" not in data
+    assert "code" not in data
 
     mock_register.assert_awaited_once()
 
@@ -70,7 +71,7 @@ def test_register_duplicate_email(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_and_send_verification",
+        "app.api.v1.routers.auth.register_and_send_code_verification",
         mock_register
     )
 
@@ -92,7 +93,7 @@ def test_register_invalid_data(monkeypatch):
     mock_register = AsyncMock()
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_and_send_verification",
+        "app.api.v1.routers.auth.register_and_send_code_verification",
         mock_register
     )
 
@@ -118,7 +119,7 @@ def test_register_database_error(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "app.api.v1.routers.auth.register_and_send_verification",
+        "app.api.v1.routers.auth.register_and_send_code_verification",
         mock_register
     )
 
