@@ -1,16 +1,12 @@
 "use client";
+import { DashboardReveal } from "@/components/dashboard/dashboard-reveal";
 
 import { QuizzesSkeleton } from "./skeleton";
+import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
 
 import Link from "next/link";
 import { redirectExpiredSession as redirectToLogin } from "@/lib/session-client";
-import {
-  ViewTransition,
-  startTransition,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
+import { startTransition, useEffect, useLayoutEffect, useState } from "react";
 
 type Quiz = {
   id: string;
@@ -27,11 +23,7 @@ type QuizzesState =
   | { status: "ready"; quizzes: Quiz[] };
 
 function isQuiz(value: unknown): value is Quiz {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value)
-  ) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
 
@@ -62,10 +54,7 @@ function formatDate(value: string): string {
 }
 
 function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
-  const totalQuestions = quizzes.reduce(
-    (total, quiz) => total + quiz.question_count,
-    0,
-  );
+  const totalQuestions = quizzes.reduce((total, quiz) => total + quiz.question_count, 0);
 
   const stats = [
     {
@@ -79,48 +68,35 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
   ];
 
   return (
-    <div className="space-y-8">
+    <DashboardReveal className="space-y-5">
       <header>
-        <p className="text-sm font-medium text-primary">
-          Biblioteca de evaluaciones
-        </p>
+        <p className="text-sm font-medium text-primary">Biblioteca de evaluaciones</p>
 
-        <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
           Mis cuestionarios
         </h1>
 
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-          Consulta las evaluaciones que has generado con StudyAI,
-          resuelve cuestionarios y revisa tus resultados anteriores.
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+          Retoma una evaluación o descubre lo que ya has aprendido.
         </p>
       </header>
 
       <section
         aria-label="Estadísticas de cuestionarios"
-        className="grid gap-4 sm:grid-cols-2"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
         {stats.map((stat) => (
-          <article
-            key={stat.label}
-            className="rounded-2xl border border-input-border bg-surface p-6"
-          >
-            <p className="text-sm text-muted">
-              {stat.label}
-            </p>
+          <article key={stat.label} className="workspace-panel workspace-library-stat">
+            <p className="text-sm text-muted">{stat.label}</p>
 
-            <p className="mt-4 font-display text-3xl font-semibold tracking-tight">
-              {stat.value}
-            </p>
+            <strong>{stat.value}</strong>
           </article>
         ))}
       </section>
 
       <section aria-labelledby="quizzes-list-title">
         <div className="mb-5">
-          <h2
-            id="quizzes-list-title"
-            className="font-display text-2xl font-semibold"
-          >
+          <h2 id="quizzes-list-title" className="font-display text-lg font-semibold">
             Todas las evaluaciones
           </h2>
 
@@ -130,19 +106,16 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
         </div>
 
         {quizzes.length === 0 ? (
-          <div className="rounded-2xl border border-input-border bg-surface p-8 text-center">
-            <h3 className="font-display text-xl font-semibold">
-              Todavía no tienes cuestionarios
-            </h3>
+          <div className="workspace-panel p-8 text-center">
+            <h3 className="font-display text-xl font-semibold">Todavía no tienes cuestionarios</h3>
 
             <p className="mt-3 text-sm leading-6 text-muted">
-              Abre uno de tus documentos y genera tu primera
-              evaluación con inteligencia artificial.
+              Abre uno de tus documentos y genera tu primera evaluación con inteligencia artificial.
             </p>
 
             <Link
               href="/dashboard/documents"
-              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-[filter] hover:brightness-110"
+              className="workspace-action workspace-action-primary mt-6"
             >
               Ir a mis documentos
             </Link>
@@ -152,51 +125,42 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
             {quizzes.map((quiz) => (
               <article
                 key={quiz.id}
-                className="flex flex-col justify-between gap-7 rounded-2xl border border-input-border bg-surface p-5 transition-[border-color,box-shadow] duration-200 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 motion-reduce:transition-none sm:p-6"
+                className="workspace-panel flex flex-col justify-between gap-5 p-5"
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-foreground">
-                      {quiz.question_count}{" "}
-                      {quiz.question_count === 1
-                        ? "pregunta"
-                        : "preguntas"}
+                    <span className="inline-flex items-center gap-2 rounded-lg border border-border/50 bg-accent-soft/50 px-2.5 py-1.5 text-xs font-medium text-accent-foreground">
+                      <DashboardIcon name="quiz" className="size-3.5" />
+                      {quiz.question_count} {quiz.question_count === 1 ? "pregunta" : "preguntas"}
                     </span>
 
-                    <span className="text-xs text-muted">
-                      {formatDate(quiz.created_at)}
-                    </span>
+                    <span className="text-xs text-muted">{formatDate(quiz.created_at)}</span>
                   </div>
 
-                  <h3 className="mt-6 break-words font-display text-xl font-semibold leading-7 tracking-tight">
+                  <h3 className="mt-4 break-words text-base font-semibold leading-6 tracking-tight">
                     {quiz.title}
                   </h3>
-
-                  <p className="mt-3 text-sm leading-6 text-muted">
-                    Evaluación de opción única generada a partir
-                    de un documento de estudio.
-                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-3 border-t border-input-border pt-5">
                   <Link
                     href={`/dashboard/quizzes/${encodeURIComponent(quiz.id)}`}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[filter,transform] hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none"
+                    className="workspace-action workspace-action-primary"
                   >
                     Resolver
-                    <span aria-hidden="true">→</span>
+                    <DashboardIcon name="arrow" className="size-3.5" />
                   </Link>
 
                   <Link
                     href={`/dashboard/quizzes/${encodeURIComponent(quiz.id)}/attempts`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-input-border bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:border-primary/40 hover:bg-surface-soft"
+                    className="workspace-action"
                   >
                     Ver historial
                   </Link>
 
                   <Link
                     href={`/dashboard/documents/${encodeURIComponent(quiz.document_id)}`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-input-border bg-surface px-4 py-2.5 text-sm font-medium transition-colors hover:border-primary/40 hover:bg-surface-soft"
+                    className="workspace-action"
                   >
                     Ver documento
                   </Link>
@@ -206,7 +170,7 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
           </div>
         )}
       </section>
-    </div>
+    </DashboardReveal>
   );
 }
 
@@ -243,9 +207,7 @@ export default function QuizzesPage() {
           signal: controller.signal,
         });
 
-        const payload: unknown = await response
-          .json()
-          .catch(() => null);
+        const payload: unknown = await response.json().catch(() => null);
 
         if (controller.signal.aborted) return;
 
@@ -255,9 +217,7 @@ export default function QuizzesPage() {
         }
 
         if (!response.ok) {
-          throw new Error(
-            `No se pudieron consultar los cuestionarios (HTTP ${response.status}).`,
-          );
+          throw new Error(`No se pudieron consultar los cuestionarios (HTTP ${response.status}).`);
         }
 
         if (
@@ -267,14 +227,11 @@ export default function QuizzesPage() {
           !Array.isArray(payload.quizzes) ||
           !payload.quizzes.every(isQuiz)
         ) {
-          throw new Error(
-            "El servidor devolvió un listado de cuestionarios inesperado.",
-          );
+          throw new Error("El servidor devolvió un listado de cuestionarios inesperado.");
         }
 
-        const quizzes = [...payload.quizzes].sort(
-          (a, b) =>
-            b.created_at.localeCompare(a.created_at),
+        const quizzes = [...payload.quizzes].sort((a, b) =>
+          b.created_at.localeCompare(a.created_at),
         );
 
         if (controller.signal.aborted) return;
@@ -292,9 +249,7 @@ export default function QuizzesPage() {
           setState({
             status: "error",
             message:
-              caught instanceof Error
-                ? caught.message
-                : "No se pudieron cargar los cuestionarios.",
+              caught instanceof Error ? caught.message : "No se pudieron cargar los cuestionarios.",
           });
         });
       }
@@ -309,26 +264,22 @@ export default function QuizzesPage() {
 
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-12">
-      <ViewTransition default="none" update="auto">
+      <>
         {state.status === "loading" ? (
           <QuizzesSkeleton />
         ) : state.status === "redirecting" ? (
-          <div
-            role="status"
-            className="flex items-center gap-3 rounded-2xl border border-input-border bg-surface p-6"
-          >
+          <div role="status" className="workspace-panel flex items-center gap-3 p-6">
             <span
               aria-hidden="true"
               className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none"
             />
 
             <p className="text-sm text-muted">
-              Tu sesión ha terminado. Redirigiendo al inicio
-              de sesión...
+              Tu sesión ha terminado. Redirigiendo al inicio de sesión...
             </p>
           </div>
         ) : state.status === "error" ? (
-          <section className="rounded-2xl border border-input-border bg-surface p-6 sm:p-8">
+          <section className="workspace-panel p-6 sm:p-8">
             <h1 className="font-display text-xl font-semibold">
               No se pudieron cargar los cuestionarios
             </h1>
@@ -343,7 +294,7 @@ export default function QuizzesPage() {
                 setState({ status: "loading" });
                 setRetryKey((value) => value + 1);
               }}
-              className="mt-6 min-h-11 cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-[filter] hover:brightness-110"
+              className="workspace-action workspace-action-primary mt-6"
             >
               Reintentar
             </button>
@@ -351,7 +302,7 @@ export default function QuizzesPage() {
         ) : (
           <QuizzesContent quizzes={state.quizzes} />
         )}
-      </ViewTransition>
+      </>
     </main>
   );
 }

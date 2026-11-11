@@ -3,7 +3,9 @@ from uuid import UUID
 
 from app.schemas.quiz_generation import GeneratedQuiz
 from app.services.generative_ai_service import generate_quiz_json
-from app.services.quiz_generation_service import validate_generated_quiz
+from app.services.quiz_generation_service import (
+    validate_generated_quiz_with_answer_text,
+)
 from app.services.semantic_search_service import (
     search_relevant_chunks_for_user,
 )
@@ -152,6 +154,21 @@ CALIDAD DE LAS OPCIONES:
 - No incluyas dos respuestas que puedan considerarse correctas.
 - Evita copiar literalmente párrafos completos como respuesta.
 
+VALIDACIÓN DE LA RESPUESTA CORRECTA:
+- Identifica primero la respuesta respaldada por el fragmento.
+- Incluye esa respuesta entre las cuatro opciones.
+- Devuelve correct_answer copiando exactamente el texto de
+  la opción correcta.
+- La explicación debe justificar correct_answer y no otra opción.
+- No presentes como correctas afirmaciones que contradigan
+  el contenido del documento.
+- Comprueba que las otras tres opciones sean incorrectas.
+- Verifica que correct_answer coincida exactamente con
+  una de las cuatro opciones.
+- No devuelvas correct_option.
+- Python calculará automáticamente el índice de la
+  respuesta correcta después de validar el JSON.
+
 CRITERIOS PEDAGÓGICOS:
 - Fácil: reconocimiento y comprensión de conceptos.
 - Intermedia: aplicación y comparación de conceptos.
@@ -164,10 +181,22 @@ SI EL CONTENIDO ES INSUFICIENTE:
 - Devuelve únicamente preguntas respaldadas por los fragmentos.
 - El backend validará si se completó la cantidad solicitada.
 
+VERIFICACIÓN FINAL:
+Antes de devolver el JSON:
+- Revisa que cada pregunta tenga exactamente una respuesta correcta.
+- Comprueba que correct_answer sea idéntica a una de las opciones.
+- Comprueba que la explicación respalde esa misma respuesta.
+- Revisa que las otras opciones no puedan considerarse correctas.
+- Revisa que ninguna respuesta contradiga el fragmento utilizado.
+- Verifica que cada CHUNK_ID pertenezca al contexto proporcionado.
+- Evita repetir conceptos entre las preguntas.
+
 FORMATO:
 Devuelve exclusivamente el JSON definido por el esquema.
 Cada pregunta debe contener:
-question_text, options, correct_option, explanation y chunk_id.
+question_text, options, correct_answer, explanation y chunk_id.
+
+No incluyas correct_option en el JSON.
 
 FRAGMENTOS DEL DOCUMENTO:
 
@@ -177,8 +206,8 @@ FRAGMENTOS DEL DOCUMENTO:
     # Generar preguntas utilizando Gemini
     raw_json = generate_quiz_json(prompt)
 
-    # Validar el cuestionario generado
-    quiz = validate_generated_quiz(
+    # Validar la respuesta textual y calcular correct_option
+    quiz = validate_generated_quiz_with_answer_text(
         raw_json=raw_json,
         allowed_chunk_ids=allowed_chunk_ids,
         expected_count=question_count,

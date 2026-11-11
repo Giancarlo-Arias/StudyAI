@@ -38,7 +38,7 @@ export function LogoutButton() {
         type="button"
         onClick={handleLogout}
         disabled={isSubmitting}
-        className="cursor-pointer rounded-xl border border-input-border px-4 py-2 text-sm font-medium transition-colors hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-60"
+        className="workspace-action"
       >
         {isSubmitting ? "Cerrando sesión..." : "Cerrar sesión"}
       </button>

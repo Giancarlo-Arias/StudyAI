@@ -33,7 +33,7 @@ def quiz_environment(monkeypatch):
             "Crear documentos",
             "Modificar servidores",
         ],
-        "correct_option": 0,
+        "correct_answer": "Verificar la identidad",
         "explanation": "La autenticación verifica la identidad.",
         "chunk_id": str(chunk_id),
     }
@@ -78,11 +78,13 @@ def test_generate_quiz_using_rag(quiz_environment):
     )
 
     assert len(quiz.questions) == 1
+
     assert (
         quiz.questions[0].options[
             quiz.questions[0].correct_option
         ] == "Verificar la identidad"
     )
+
     assert quiz.questions[0].chunk_id == data["chunk_id"]
 
     assert data["calls"][0] == (

@@ -1,15 +1,12 @@
 "use client";
+import { DashboardBackLink } from "@/components/dashboard/dashboard-navigation";
+
+import { DashboardReveal } from "@/components/dashboard/dashboard-reveal";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { redirectExpiredSession } from "@/lib/session-client";
-import {
-  Suspense,
-  ViewTransition,
-  startTransition,
-  useEffect,
-  useState,
-} from "react";
+import { Suspense, ViewTransition, startTransition, useEffect, useState } from "react";
 
 type QuizAttempt = {
   attempt_id: string;
@@ -27,11 +24,7 @@ type HistoryState =
   | { status: "ready"; attempts: QuizAttempt[] };
 
 function isQuizAttempt(value: unknown): value is QuizAttempt {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value)
-  ) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
 
@@ -83,10 +76,7 @@ function HistorySkeleton() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {["total", "best", "average"].map((item) => (
-          <div
-            key={item}
-            className="rounded-2xl border border-input-border bg-surface p-6"
-          >
+          <div key={item} className="rounded-2xl border border-input-border bg-surface p-6">
             <div className="h-4 w-32 rounded-full bg-surface-soft" />
             <div className="mt-4 h-9 w-24 rounded-lg bg-surface-soft" />
           </div>
@@ -113,10 +103,7 @@ function HistorySkeleton() {
 
       <div className="space-y-4">
         {["attempt-a", "attempt-b", "attempt-c"].map((item) => (
-          <div
-            key={item}
-            className="rounded-2xl border border-input-border bg-surface p-5 sm:p-6"
-          >
+          <div key={item} className="rounded-2xl border border-input-border bg-surface p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="space-y-3">
                 <div className="h-6 w-32 rounded-lg bg-surface-soft" />
@@ -137,35 +124,23 @@ function HistorySkeleton() {
   );
 }
 
-function HistoryContent({
-  attempts,
-}: {
-  attempts: QuizAttempt[];
-}) {
+function HistoryContent({ attempts }: { attempts: QuizAttempt[] }) {
   if (attempts.length === 0) {
     return (
-      <section className="rounded-2xl border border-input-border bg-surface p-8 text-center">
-        <h2 className="font-display text-xl font-semibold">
-          Aún no tienes intentos
-        </h2>
+      <section className="workspace-panel p-8 text-center">
+        <h2 className="font-display text-xl font-semibold">Aún no tienes intentos</h2>
 
         <p className="mt-3 text-sm leading-6 text-muted">
-          Resuelve el cuestionario para registrar tu primera
-          calificación.
+          Resuelve el cuestionario para registrar tu primera calificación.
         </p>
       </section>
     );
   }
 
-  const bestScore = Math.max(
-    ...attempts.map((attempt) => attempt.score_percent),
-  );
+  const bestScore = Math.max(...attempts.map((attempt) => attempt.score_percent));
 
   const averageScore =
-    attempts.reduce(
-      (total, attempt) => total + attempt.score_percent,
-      0,
-    ) / attempts.length;
+    attempts.reduce((total, attempt) => total + attempt.score_percent, 0) / attempts.length;
 
   const latestAttempt = attempts[0];
 
@@ -185,31 +160,19 @@ function HistoryContent({
   ];
 
   return (
-    <div className="space-y-8">
-      <section
-        aria-label="Estadísticas del historial"
-        className="grid gap-4 sm:grid-cols-3"
-      >
+    <DashboardReveal className="space-y-8">
+      <section aria-label="Estadísticas del historial" className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
-          <article
-            key={stat.label}
-            className="rounded-2xl border border-input-border bg-surface p-6"
-          >
-            <p className="text-sm text-muted">
-              {stat.label}
-            </p>
+          <article key={stat.label} className="workspace-panel px-5 py-4">
+            <p className="text-sm text-muted">{stat.label}</p>
 
-            <p className="mt-4 font-display text-3xl font-semibold tracking-tight">
-              {stat.value}
-            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{stat.value}</p>
           </article>
         ))}
       </section>
 
       <section className="rounded-2xl border border-primary/20 bg-accent-soft p-6">
-        <p className="text-sm font-medium text-accent-foreground">
-          Último resultado
-        </p>
+        <p className="text-sm font-medium text-accent-foreground">Último resultado</p>
 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -218,23 +181,17 @@ function HistoryContent({
             </p>
 
             <p className="mt-2 text-sm text-muted">
-              {latestAttempt.correct_count} de{" "}
-              {latestAttempt.question_count} respuestas correctas
+              {latestAttempt.correct_count} de {latestAttempt.question_count} respuestas correctas
             </p>
           </div>
 
-          <p className="text-sm text-muted">
-            {formatDate(latestAttempt.submitted_at)}
-          </p>
+          <p className="text-sm text-muted">{formatDate(latestAttempt.submitted_at)}</p>
         </div>
       </section>
 
       <section aria-labelledby="attempts-list-title">
         <div className="mb-5">
-          <h2
-            id="attempts-list-title"
-            className="font-display text-2xl font-semibold"
-          >
+          <h2 id="attempts-list-title" className="font-display text-lg font-semibold">
             Todos los intentos
           </h2>
 
@@ -247,7 +204,7 @@ function HistoryContent({
           {attempts.map((attempt, index) => (
             <article
               key={attempt.attempt_id}
-              className="rounded-2xl border border-input-border bg-surface p-5 transition-colors hover:border-primary/30 sm:p-6"
+              className="workspace-panel p-5 transition-colors hover:border-primary/30 sm:p-6"
             >
               <div className="flex flex-wrap items-start justify-between gap-5">
                 <div className="min-w-0 space-y-3">
@@ -263,13 +220,10 @@ function HistoryContent({
                     )}
                   </div>
 
-                  <p className="text-sm text-muted">
-                    {formatDate(attempt.submitted_at)}
-                  </p>
+                  <p className="text-sm text-muted">{formatDate(attempt.submitted_at)}</p>
 
                   <p className="text-sm text-muted">
-                    {attempt.correct_count} de{" "}
-                    {attempt.question_count} respuestas correctas
+                    {attempt.correct_count} de {attempt.question_count} respuestas correctas
                   </p>
                 </div>
 
@@ -278,16 +232,14 @@ function HistoryContent({
                     {formatScore(attempt.score_percent)}
                   </p>
 
-                  <p className="mt-1 text-xs text-muted">
-                    Calificación
-                  </p>
+                  <p className="mt-1 text-xs text-muted">Calificación</p>
                 </div>
               </div>
 
               <div className="mt-5 border-t border-input-border pt-4">
                 <Link
                   href={`/dashboard/quizzes/${encodeURIComponent(attempt.quiz_id)}/attempts/${encodeURIComponent(attempt.attempt_id)}`}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-input-border bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-surface-soft"
+                  className="workspace-action"
                 >
                   Ver revisión
                   <span aria-hidden="true">→</span>
@@ -297,15 +249,11 @@ function HistoryContent({
           ))}
         </div>
       </section>
-    </div>
+    </DashboardReveal>
   );
 }
 
-function QuizAttemptsView({
-  quizId,
-}: {
-  quizId: string;
-}) {
+function QuizAttemptsView({ quizId }: { quizId: string }) {
   const [state, setState] = useState<HistoryState>({
     status: "loading",
   });
@@ -327,14 +275,11 @@ function QuizAttemptsView({
 
     async function loadHistory() {
       try {
-        const response = await fetch(
-          `/api/quizzes/${encodeURIComponent(quizId)}/attempts`,
-          {
-            method: "GET",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
+        const response = await fetch(`/api/quizzes/${encodeURIComponent(quizId)}/attempts`, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal,
+        });
 
         if (controller.signal.aborted) return;
 
@@ -345,14 +290,10 @@ function QuizAttemptsView({
 
         if (!response.ok) {
           if (response.status === 404) {
-            throw new Error(
-              "El cuestionario no existe o no tienes acceso.",
-            );
+            throw new Error("El cuestionario no existe o no tienes acceso.");
           }
 
-          throw new Error(
-            "No se pudo consultar el historial.",
-          );
+          throw new Error("No se pudo consultar el historial.");
         }
 
         const payload: unknown = await response.json();
@@ -364,16 +305,12 @@ function QuizAttemptsView({
           !Array.isArray(payload.attempts) ||
           !payload.attempts.every(isQuizAttempt)
         ) {
-          throw new Error(
-            "El servidor devolvió un historial inesperado.",
-          );
+          throw new Error("El servidor devolvió un historial inesperado.");
         }
 
         const attempts = payload.attempts
           .filter((attempt) => attempt.quiz_id === quizId)
-          .sort((a, b) =>
-            b.submitted_at.localeCompare(a.submitted_at),
-          );
+          .sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
 
         if (controller.signal.aborted) return;
 
@@ -389,10 +326,7 @@ function QuizAttemptsView({
         startTransition(() => {
           setState({
             status: "error",
-            message:
-              caught instanceof Error
-                ? caught.message
-                : "No se pudo cargar el historial.",
+            message: caught instanceof Error ? caught.message : "No se pudo cargar el historial.",
           });
         });
       }
@@ -407,23 +341,14 @@ function QuizAttemptsView({
 
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-12">
-      <Link
-        href="/dashboard/quizzes"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-primary"
-      >
-        <span aria-hidden="true">←</span>
-        Volver a cuestionarios
-      </Link>
+      <DashboardBackLink href="/dashboard/quizzes">Volver a cuestionarios</DashboardBackLink>
 
       <div className="mt-8">
-        <ViewTransition default="none" update="auto">
+        <ViewTransition default="none" update="workspace-swap">
           {state.status === "loading" ? (
             <HistorySkeleton />
           ) : state.status === "redirecting" ? (
-            <div
-              role="status"
-              className="rounded-2xl border border-input-border bg-surface p-6"
-            >
+            <div role="status" className="workspace-panel p-6">
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
@@ -431,16 +356,13 @@ function QuizAttemptsView({
                 />
 
                 <p className="text-sm text-muted">
-                  Tu sesión ha terminado. Redirigiendo al inicio
-                  de sesión...
+                  Tu sesión ha terminado. Redirigiendo al inicio de sesión...
                 </p>
               </div>
             </div>
           ) : state.status === "error" ? (
-            <section className="rounded-2xl border border-input-border bg-surface p-6 sm:p-8">
-              <h1 className="font-display text-xl font-semibold">
-                No se pudo cargar el historial
-              </h1>
+            <section className="workspace-panel p-6 sm:p-8">
+              <h1 className="font-display text-xl font-semibold">No se pudo cargar el historial</h1>
 
               <p role="alert" className="mt-3 text-sm text-muted">
                 {state.message}
@@ -452,7 +374,7 @@ function QuizAttemptsView({
                   setState({ status: "loading" });
                   setRetryKey((value) => value + 1);
                 }}
-                className="mt-6 min-h-11 cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-[filter] hover:brightness-110"
+                className="workspace-action workspace-action-primary mt-6"
               >
                 Reintentar
               </button>
@@ -460,17 +382,14 @@ function QuizAttemptsView({
           ) : (
             <div className="space-y-8">
               <header>
-                <p className="text-sm font-medium text-primary">
-                  Progreso de estudio
-                </p>
+                <p className="text-sm font-medium text-primary">Progreso de estudio</p>
 
-                <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
                   Historial de intentos
                 </h1>
 
                 <p className="mt-3 text-sm text-muted">
-                  Consulta tus calificaciones y la evolución
-                  de tu aprendizaje.
+                  Consulta tus calificaciones y la evolución de tu aprendizaje.
                 </p>
               </header>
 

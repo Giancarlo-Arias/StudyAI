@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from app.schemas.quiz_generation import GeneratedQuiz
+from app.schemas.quiz_generation import GeminiQuiz
 
 
 MODEL_NAME = "gemini-3.5-flash-lite"
@@ -29,8 +29,8 @@ def generate_quiz_json(prompt: str) -> str:
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_json_schema=GeneratedQuiz.model_json_schema(),
-                temperature=0.4,
+                response_json_schema=GeminiQuiz.model_json_schema(),
+                temperature=0.2,
             ),
         )
     finally:

@@ -50,12 +50,13 @@ const themeRestoreScript = `
       const isDark = theme === "dark" || (theme !== "light" && systemTheme.matches);
       document.querySelector('meta[name="theme-color"]')?.setAttribute(
         "content",
-        isDark ? "#101015" : "#f8f9fc",
+        isDark ? "#111527" : "#f2f4fb",
       );
     }
 
     try {
       const theme = localStorage.getItem("studyai-theme");
+      if (localStorage.getItem("studyai-sidebar") === "collapsed") root.setAttribute("data-sidebar", "collapsed");
 
       if (theme === "light" || theme === "dark") {
         root.setAttribute("data-theme", theme);
@@ -78,7 +79,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
-        <meta name="theme-color" content="#f8f9fc" />
+        <meta name="theme-color" content="#f2f4fb" />
         <script>{themeRestoreScript}</script>
       </head>
       <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">

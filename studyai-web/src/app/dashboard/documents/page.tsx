@@ -1,19 +1,17 @@
-import { Suspense, ViewTransition } from "react";
+import { Suspense } from "react";
 import { requireUser } from "@/lib/auth-server";
 import { DocumentsManager } from "@/components/dashboard/documents-manager";
-import { DocumentsPageSkeleton } from "@/components/dashboard/documents-skeleton";
+import { DashboardLoading } from "@/components/dashboard/dashboard-loading";
 
 async function DocumentsContent() {
   await requireUser();
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12">
-      <div className="mb-8">
-        <p className="text-sm font-medium text-primary">
-          Biblioteca de estudio
-        </p>
+      <div className="mb-6">
+        <p className="text-sm font-medium text-primary">Biblioteca de estudio</p>
 
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
           Mis documentos
         </h1>
 
@@ -29,10 +27,14 @@ async function DocumentsContent() {
 
 export default function DocumentsPage() {
   return (
-    <ViewTransition default="none" update="loading-reveal">
-      <Suspense fallback={<DocumentsPageSkeleton />}>
-        <DocumentsContent />
-      </Suspense>
-    </ViewTransition>
+    <Suspense
+      fallback={
+        <main>
+          <DashboardLoading label="Preparando tu biblioteca" />
+        </main>
+      }
+    >
+      <DocumentsContent />
+    </Suspense>
   );
 }

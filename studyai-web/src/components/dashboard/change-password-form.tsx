@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { PasswordInput } from "@/components/auth/password-input";
 import { redirectExpiredSession } from "@/lib/session-client";
+import { DashboardIcon } from "./dashboard-icon";
 
-async function getResponseError(
-  response: Response,
-  fallback: string,
-): Promise<string> {
+async function getResponseError(response: Response, fallback: string): Promise<string> {
   const data: unknown = await response.json().catch(() => null);
 
   if (data && typeof data === "object") {
@@ -78,12 +77,7 @@ export function ChangePasswordForm() {
       }
 
       if (!response.ok) {
-        throw new Error(
-          await getResponseError(
-            response,
-            "No se pudo cambiar la contraseña.",
-          ),
-        );
+        throw new Error(await getResponseError(response, "No se pudo cambiar la contraseña."));
       }
 
       setCurrentPassword("");
@@ -91,43 +85,35 @@ export function ChangePasswordForm() {
       setConfirmPassword("");
       setSuccess("Tu contraseña se actualizó correctamente.");
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudo cambiar la contraseña.",
-      );
+      setError(caught instanceof Error ? caught.message : "No se pudo cambiar la contraseña.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <section className="rounded-2xl border border-input-border bg-surface p-6 sm:p-8">
-      <div>
-        <h2 className="font-display text-xl font-semibold">
-          Seguridad de la cuenta
-        </h2>
+    <section className="workspace-panel p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-foreground">
+          <DashboardIcon name="lock" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Seguridad de la cuenta</h2>
 
-        <p className="mt-2 text-sm leading-6 text-muted">
-          Actualiza tu contraseña para mantener protegida tu cuenta.
-        </p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Actualiza tu contraseña para mantener protegida tu cuenta.
+          </p>
+        </div>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-8 max-w-2xl space-y-6"
-      >
+      <form onSubmit={handleSubmit} className="mt-6 max-w-2xl space-y-5">
         <div className="space-y-2">
-          <label
-            htmlFor="current-password"
-            className="block text-sm font-medium"
-          >
+          <label htmlFor="current-password" className="block text-sm font-medium">
             Contraseña actual
           </label>
 
-          <input
+          <PasswordInput
             id="current-password"
-            type="password"
             autoComplete="current-password"
             required
             maxLength={128}
@@ -138,22 +124,17 @@ export function ChangePasswordForm() {
               setError("");
               setSuccess("");
             }}
-            className="min-h-12 w-full rounded-xl border border-input-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-60"
           />
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2">
           <div className="space-y-2">
-            <label
-              htmlFor="new-password"
-              className="block text-sm font-medium"
-            >
+            <label htmlFor="new-password" className="block text-sm font-medium">
               Nueva contraseña
             </label>
 
-            <input
+            <PasswordInput
               id="new-password"
-              type="password"
               autoComplete="new-password"
               required
               minLength={12}
@@ -165,21 +146,16 @@ export function ChangePasswordForm() {
                 setError("");
                 setSuccess("");
               }}
-              className="min-h-12 w-full rounded-xl border border-input-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-60"
             />
           </div>
 
           <div className="space-y-2">
-            <label
-              htmlFor="confirm-password"
-              className="block text-sm font-medium"
-            >
+            <label htmlFor="confirm-password" className="block text-sm font-medium">
               Confirmar nueva contraseña
             </label>
 
-            <input
+            <PasswordInput
               id="confirm-password"
-              type="password"
               autoComplete="new-password"
               required
               value={confirmPassword}
@@ -189,14 +165,12 @@ export function ChangePasswordForm() {
                 setError("");
                 setSuccess("");
               }}
-              className="min-h-12 w-full rounded-xl border border-input-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-60"
             />
           </div>
         </div>
 
-        <p className="text-xs text-muted">
-          La nueva contraseña debe tener entre 12 y 128 caracteres
-          y ser diferente de la actual.
+        <p className="text-xs leading-5 text-muted">
+          La nueva contraseña debe tener entre 12 y 128 caracteres y ser diferente de la actual.
         </p>
 
         {error && (
@@ -217,11 +191,11 @@ export function ChangePasswordForm() {
           </p>
         )}
 
-        <div className="border-t border-input-border pt-6">
+        <div className="border-t border-border pt-6">
           <button
             type="submit"
             disabled={!isValid || isSubmitting}
-            className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-[filter,transform] hover:brightness-110 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+            className="workspace-action workspace-action-primary"
           >
             {isSubmitting && (
               <span

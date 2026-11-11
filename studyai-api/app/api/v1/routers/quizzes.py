@@ -11,6 +11,9 @@ from app.repositories.quiz_attempt_query_repository import (
 from app.repositories.quiz_attempt_repository import (
     submit_quiz_attempt_for_user,
 )
+from app.repositories.quiz_practice_repository import (
+    check_quiz_practice_answer_for_user,
+)
 from app.repositories.quiz_query_repository import (
     get_quiz_for_user,
     list_quizzes_for_user,
@@ -21,6 +24,8 @@ from app.schemas.quiz_api import (
     QuizGenerateRequest,
     QuizGenerateResponse,
     QuizListResponse,
+    QuizPracticeCheckRequest,
+    QuizPracticeCheckResponse,
     QuizPublicDetail,
     QuizSubmitRequest,
     QuizSubmitResponse,
@@ -101,6 +106,30 @@ def get_my_quiz(
     return quiz
 
 
+# Nuevo: comprobar una respuesta sin guardar intentos.
+@router.post(
+    "/{quiz_id}/practice/check",
+    response_model=QuizPracticeCheckResponse,
+)
+def check_my_quiz_practice_answer(
+    quiz_id: UUID,
+    payload: QuizPracticeCheckRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    result = check_quiz_practice_answer_for_user(
+        quiz_id=quiz_id,
+        question_id=payload.question_id,
+        user_id=current_user["id"],
+        selected_option=payload.selected_option,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuestionario o pregunta no encontrado",
+        )
+
+    return result
 
 
 @router.post(
@@ -136,7 +165,6 @@ def submit_my_quiz(
         ) from exc
 
     return result
-
 
 
 @router.get(

@@ -95,6 +95,23 @@ class QuizSubmitResponse(BaseModel):
     answers: list[QuizAttemptAnswerReview]
 
 
+# Nuevo: solicitud para comprobar una respuesta en modo Práctica.
+class QuizPracticeCheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question_id: UUID
+    selected_option: int = Field(strict=True, ge=0, le=3)
+
+
+# Nuevo: resultado de una pregunta sin registrar un intento.
+class QuizPracticeCheckResponse(BaseModel):
+    question_id: UUID
+    selected_option: int
+    correct_option: int
+    is_correct: bool
+    explanation: str | None
+
+
 class QuizAttemptHistoryItem(BaseModel):
     attempt_id: UUID
     quiz_id: UUID

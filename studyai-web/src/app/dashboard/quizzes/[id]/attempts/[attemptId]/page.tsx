@@ -1,15 +1,12 @@
 "use client";
+import { DashboardBackLink } from "@/components/dashboard/dashboard-navigation";
+
+import { DashboardReveal } from "@/components/dashboard/dashboard-reveal";
 
 import Link from "next/link";
 import { redirectExpiredSession as redirectToLogin } from "@/lib/session-client";
 import { useParams } from "next/navigation";
-import {
-  Suspense,
-  ViewTransition,
-  startTransition,
-  useEffect,
-  useState,
-} from "react";
+import { Suspense, ViewTransition, startTransition, useEffect, useState } from "react";
 
 type ReviewedAnswer = {
   question_id: string;
@@ -39,11 +36,7 @@ type ReviewState =
   | { status: "ready"; attempt: AttemptReview };
 
 function isAttemptReview(value: unknown): value is AttemptReview {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value)
-  ) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
 
@@ -61,11 +54,7 @@ function isAttemptReview(value: unknown): value is AttemptReview {
     typeof data.submitted_at === "string" &&
     Array.isArray(data.answers) &&
     data.answers.every((item: unknown) => {
-      if (
-        typeof item !== "object" ||
-        item === null ||
-        Array.isArray(item)
-      ) {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) {
         return false;
       }
 
@@ -88,9 +77,7 @@ function isAttemptReview(value: unknown): value is AttemptReview {
         typeof answer.question_text === "string" &&
         Array.isArray(answer.options) &&
         answer.options.length === 4 &&
-        answer.options.every(
-          (option: unknown) => typeof option === "string",
-        )
+        answer.options.every((option: unknown) => typeof option === "string")
       );
     })
   );
@@ -131,10 +118,7 @@ function AttemptReviewSkeleton() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {["score", "correct", "questions"].map((item) => (
-          <div
-            key={item}
-            className="rounded-2xl border border-input-border bg-surface p-6"
-          >
+          <div key={item} className="rounded-2xl border border-input-border bg-surface p-6">
             <div className="h-4 w-32 rounded-full bg-surface-soft" />
             <div className="mt-4 h-9 w-24 rounded-lg bg-surface-soft" />
           </div>
@@ -147,52 +131,38 @@ function AttemptReviewSkeleton() {
       </div>
 
       <div className="space-y-5">
-        {["question-1", "question-2", "question-3"].map(
-          (item) => (
-            <div
-              key={item}
-              className="rounded-2xl border border-input-border bg-surface p-5 sm:p-7"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="h-6 w-24 rounded-full bg-surface-soft" />
-                <div className="h-6 w-24 rounded-full bg-surface-soft" />
-              </div>
-
-              <div className="mt-6 space-y-3">
-                <div className="h-5 w-full rounded-lg bg-surface-soft" />
-                <div className="h-5 w-4/5 rounded-lg bg-surface-soft" />
-              </div>
-
-              <div className="mt-7 space-y-3">
-                {["a", "b", "c", "d"].map((option) => (
-                  <div
-                    key={option}
-                    className="h-14 rounded-xl bg-surface-soft"
-                  />
-                ))}
-              </div>
-
-              <div className="mt-6 rounded-xl bg-surface-soft p-5">
-                <div className="h-4 w-28 rounded-full bg-surface" />
-                <div className="mt-4 h-4 w-full rounded-full bg-surface" />
-                <div className="mt-3 h-4 w-3/4 rounded-full bg-surface" />
-              </div>
+        {["question-1", "question-2", "question-3"].map((item) => (
+          <div key={item} className="rounded-2xl border border-input-border bg-surface p-5 sm:p-7">
+            <div className="flex items-center justify-between gap-4">
+              <div className="h-6 w-24 rounded-full bg-surface-soft" />
+              <div className="h-6 w-24 rounded-full bg-surface-soft" />
             </div>
-          ),
-        )}
+
+            <div className="mt-6 space-y-3">
+              <div className="h-5 w-full rounded-lg bg-surface-soft" />
+              <div className="h-5 w-4/5 rounded-lg bg-surface-soft" />
+            </div>
+
+            <div className="mt-7 space-y-3">
+              {["a", "b", "c", "d"].map((option) => (
+                <div key={option} className="h-14 rounded-xl bg-surface-soft" />
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-xl bg-surface-soft p-5">
+              <div className="h-4 w-28 rounded-full bg-surface" />
+              <div className="mt-4 h-4 w-full rounded-full bg-surface" />
+              <div className="mt-3 h-4 w-3/4 rounded-full bg-surface" />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function AttemptReviewContent({
-  attempt,
-}: {
-  attempt: AttemptReview;
-}) {
-  const answers = [...attempt.answers].sort(
-    (a, b) => a.position - b.position,
-  );
+function AttemptReviewContent({ attempt }: { attempt: AttemptReview }) {
+  const answers = [...attempt.answers].sort((a, b) => a.position - b.position);
 
   const stats = [
     {
@@ -210,62 +180,39 @@ function AttemptReviewContent({
   ];
 
   return (
-    <div className="space-y-8">
+    <DashboardReveal className="space-y-8">
       <header>
-        <p className="text-sm font-medium text-primary">
-          Evaluación completada
-        </p>
+        <p className="text-sm font-medium text-primary">Evaluación completada</p>
 
-        <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem]">
           Revisión del intento
         </h1>
 
-        <p className="mt-3 text-sm text-muted">
-          Entregado el {formatDate(attempt.submitted_at)}
-        </p>
+        <p className="mt-3 text-sm text-muted">Entregado el {formatDate(attempt.submitted_at)}</p>
       </header>
 
-      <section
-        aria-label="Resultados del intento"
-        className="grid gap-4 sm:grid-cols-3"
-      >
+      <section aria-label="Resultados del intento" className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
-          <article
-            key={stat.label}
-            className="rounded-2xl border border-input-border bg-surface p-6"
-          >
-            <p className="text-sm text-muted">
-              {stat.label}
-            </p>
+          <article key={stat.label} className="workspace-panel px-5 py-4">
+            <p className="text-sm text-muted">{stat.label}</p>
 
-            <p className="mt-4 font-display text-3xl font-semibold tracking-tight">
-              {stat.value}
-            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{stat.value}</p>
           </article>
         ))}
       </section>
 
       <div>
-        <h2 className="font-display text-2xl font-semibold">
-          Revisión de respuestas
-        </h2>
+        <h2 className="font-display text-lg font-semibold">Revisión de respuestas</h2>
 
         <p className="mt-2 text-sm leading-6 text-muted">
-          Revisa tus respuestas, identifica las correctas y
-          consulta las explicaciones generadas para este
-          cuestionario.
+          Revisa tus respuestas, identifica las correctas y consulta las explicaciones generadas
+          para este cuestionario.
         </p>
       </div>
 
-      <section
-        aria-label="Preguntas revisadas"
-        className="space-y-5"
-      >
+      <section aria-label="Preguntas revisadas" className="space-y-5">
         {answers.map((answer) => (
-          <article
-            key={answer.question_id}
-            className="overflow-hidden rounded-2xl border border-input-border bg-surface"
-          >
+          <article key={answer.question_id} className="workspace-panel overflow-hidden">
             <div className="p-5 sm:p-7">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-foreground">
@@ -279,27 +226,19 @@ function AttemptReviewContent({
                       : "bg-red-500/10 text-red-600"
                   }`}
                 >
-                  <span aria-hidden="true">
-                    {answer.is_correct ? "✓" : "✕"}
-                  </span>
+                  <span aria-hidden="true">{answer.is_correct ? "✓" : "✕"}</span>
 
-                  {answer.is_correct
-                    ? "Respuesta correcta"
-                    : "Respuesta incorrecta"}
+                  {answer.is_correct ? "Respuesta correcta" : "Respuesta incorrecta"}
                 </span>
               </div>
 
-              <h3 className="mt-6 text-lg font-semibold leading-8">
-                {answer.question_text}
-              </h3>
+              <h3 className="mt-6 text-lg font-semibold leading-8">{answer.question_text}</h3>
 
               <div className="mt-7 space-y-3">
                 {answer.options.map((option, index) => {
-                  const isSelected =
-                    index === answer.selected_option;
+                  const isSelected = index === answer.selected_option;
 
-                  const isCorrect =
-                    index === answer.correct_option;
+                  const isCorrect = index === answer.correct_option;
 
                   const optionStyle = isCorrect
                     ? "border-emerald-500/40 bg-emerald-500/5"
@@ -308,19 +247,14 @@ function AttemptReviewContent({
                       : "border-input-border bg-background";
 
                   return (
-                    <div
-                      key={option}
-                      className={`rounded-xl border p-4 ${optionStyle}`}
-                    >
+                    <div key={option} className={`rounded-xl border p-4 ${optionStyle}`}>
                       <div className="flex items-start gap-3">
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-input-border bg-surface text-xs font-semibold">
                           {String.fromCharCode(65 + index)}
                         </span>
 
                         <div className="min-w-0 flex-1">
-                          <p className="break-words text-sm leading-6">
-                            {option}
-                          </p>
+                          <p className="break-words text-sm leading-6">{option}</p>
 
                           {(isSelected || isCorrect) && (
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -346,16 +280,11 @@ function AttemptReviewContent({
 
               <div className="mt-6 rounded-xl bg-surface-soft p-5">
                 <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="text-lg text-primary"
-                  >
+                  <span aria-hidden="true" className="text-lg text-primary">
                     ✦
                   </span>
 
-                  <h4 className="text-sm font-semibold">
-                    Explicación
-                  </h4>
+                  <h4 className="text-sm font-semibold">Explicación</h4>
                 </div>
 
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-foreground">
@@ -368,31 +297,24 @@ function AttemptReviewContent({
       </section>
 
       <div className="flex flex-wrap gap-3">
-        <Link
+        <DashboardBackLink
           href={`/dashboard/quizzes/${encodeURIComponent(attempt.quiz_id)}/attempts`}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-[filter,transform] hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none"
         >
           Volver al historial
-        </Link>
+        </DashboardBackLink>
 
         <Link
           href={`/dashboard/quizzes/${encodeURIComponent(attempt.quiz_id)}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-input-border bg-surface px-5 py-3 text-sm font-medium transition-colors hover:bg-surface-soft"
+          className="workspace-action"
         >
           Resolver nuevamente
         </Link>
       </div>
-    </div>
+    </DashboardReveal>
   );
 }
 
-function AttemptReviewView({
-  quizId,
-  attemptId,
-}: {
-  quizId: string;
-  attemptId: string;
-}) {
+function AttemptReviewView({ quizId, attemptId }: { quizId: string; attemptId: string }) {
   const [state, setState] = useState<ReviewState>({
     status: "loading",
   });
@@ -425,9 +347,7 @@ function AttemptReviewView({
           signal: controller.signal,
         });
 
-        const payload: unknown = await response
-          .json()
-          .catch(() => null);
+        const payload: unknown = await response.json().catch(() => null);
 
         if (controller.signal.aborted) {
           return;
@@ -440,9 +360,7 @@ function AttemptReviewView({
 
         if (!response.ok) {
           if (response.status === 404) {
-            throw new Error(
-              "El intento no existe o no tienes acceso a él.",
-            );
+            throw new Error("El intento no existe o no tienes acceso a él.");
           }
 
           throw new Error(
@@ -451,18 +369,11 @@ function AttemptReviewView({
         }
 
         if (!isAttemptReview(payload)) {
-          throw new Error(
-            "El servidor devolvió una revisión con un formato inesperado.",
-          );
+          throw new Error("El servidor devolvió una revisión con un formato inesperado.");
         }
 
-        if (
-          payload.quiz_id !== quizId ||
-          payload.attempt_id !== attemptId
-        ) {
-          throw new Error(
-            "Los datos recibidos no corresponden al intento solicitado.",
-          );
+        if (payload.quiz_id !== quizId || payload.attempt_id !== attemptId) {
+          throw new Error("Los datos recibidos no corresponden al intento solicitado.");
         }
 
         if (controller.signal.aborted) {
@@ -483,10 +394,7 @@ function AttemptReviewView({
         startTransition(() => {
           setState({
             status: "error",
-            message:
-              caught instanceof Error
-                ? caught.message
-                : "No se pudo cargar la revisión.",
+            message: caught instanceof Error ? caught.message : "No se pudo cargar la revisión.",
           });
         });
       }
@@ -501,38 +409,28 @@ function AttemptReviewView({
 
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-12">
-      <Link
-        href={`/dashboard/quizzes/${encodeURIComponent(quizId)}/attempts`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-primary"
-      >
-        <span aria-hidden="true">←</span>
+      <DashboardBackLink href={`/dashboard/quizzes/${encodeURIComponent(quizId)}/attempts`}>
         Volver al historial
-      </Link>
+      </DashboardBackLink>
 
       <div className="mt-8">
-        <ViewTransition default="none" update="auto">
+        <ViewTransition default="none" update="workspace-swap">
           {state.status === "loading" ? (
             <AttemptReviewSkeleton />
           ) : state.status === "redirecting" ? (
-            <div
-              role="status"
-              className="flex items-center gap-3 rounded-2xl border border-input-border bg-surface p-6"
-            >
+            <div role="status" className="workspace-panel flex items-center gap-3 p-6">
               <span
                 aria-hidden="true"
                 className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none"
               />
 
               <p className="text-sm text-muted">
-                Tu sesión ha terminado. Redirigiendo al inicio
-                de sesión...
+                Tu sesión ha terminado. Redirigiendo al inicio de sesión...
               </p>
             </div>
           ) : state.status === "error" ? (
-            <section className="rounded-2xl border border-input-border bg-surface p-6 sm:p-8">
-              <h1 className="font-display text-xl font-semibold">
-                No se pudo cargar la revisión
-              </h1>
+            <section className="workspace-panel p-6 sm:p-8">
+              <h1 className="font-display text-xl font-semibold">No se pudo cargar la revisión</h1>
 
               <p role="alert" className="mt-3 text-sm text-muted">
                 {state.message}
@@ -544,7 +442,7 @@ function AttemptReviewView({
                   setState({ status: "loading" });
                   setRetryKey((value) => value + 1);
                 }}
-                className="mt-6 min-h-11 cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-[filter] hover:brightness-110"
+                className="workspace-action workspace-action-primary mt-6"
               >
                 Reintentar
               </button>
@@ -564,13 +462,7 @@ function AttemptReviewPageContent() {
     attemptId: string;
   }>();
 
-  return (
-    <AttemptReviewView
-      key={`${id}:${attemptId}`}
-      quizId={id}
-      attemptId={attemptId}
-    />
-  );
+  return <AttemptReviewView key={`${id}:${attemptId}`} quizId={id} attemptId={attemptId} />;
 }
 
 export default function AttemptReviewPage() {

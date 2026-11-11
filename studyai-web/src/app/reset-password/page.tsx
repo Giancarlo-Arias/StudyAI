@@ -1,19 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Suspense,
-  useState,
-  type FormEvent,
-} from "react";
+import { PasswordInput } from "@/components/auth/password-input";
+import { Suspense, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-async function getResponseError(
-  response: Response,
-  fallback: string,
-): Promise<string> {
+async function getResponseError(response: Response, fallback: string): Promise<string> {
   const data: unknown = await response.json().catch(() => null);
 
   if (data && typeof data === "object") {
@@ -80,23 +74,14 @@ function ResetPasswordForm() {
       });
 
       if (!response.ok) {
-        throw new Error(
-          await getResponseError(
-            response,
-            "No se pudo restablecer tu contraseña.",
-          ),
-        );
+        throw new Error(await getResponseError(response, "No se pudo restablecer tu contraseña."));
       }
 
       setNewPassword("");
       setConfirmPassword("");
       setIsCompleted(true);
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudo restablecer tu contraseña.",
-      );
+      setError(caught instanceof Error ? caught.message : "No se pudo restablecer tu contraseña.");
     } finally {
       setIsSubmitting(false);
     }
@@ -105,13 +90,11 @@ function ResetPasswordForm() {
   if (!validToken) {
     return (
       <section className="rounded-2xl border border-input-border bg-surface p-6 sm:p-8">
-        <h1 className="font-display text-2xl font-semibold">
-          Enlace no válido
-        </h1>
+        <h1 className="font-display text-2xl font-semibold">Enlace no válido</h1>
 
         <p className="mt-3 text-sm leading-6 text-muted">
-          El enlace de recuperación está incompleto o no tiene
-          un formato válido. Solicita uno nuevo para continuar.
+          El enlace de recuperación está incompleto o no tiene un formato válido. Solicita uno nuevo
+          para continuar.
         </p>
 
         <Link
@@ -131,13 +114,11 @@ function ResetPasswordForm() {
           ✓
         </div>
 
-        <h1 className="font-display text-2xl font-semibold">
-          Contraseña actualizada
-        </h1>
+        <h1 className="font-display text-2xl font-semibold">Contraseña actualizada</h1>
 
         <p className="mt-3 text-sm leading-6 text-muted">
-          Tu contraseña se restableció correctamente.
-          Ya puedes iniciar sesión con tu nueva contraseña.
+          Tu contraseña se restableció correctamente. Ya puedes iniciar sesión con tu nueva
+          contraseña.
         </p>
 
         <Link
@@ -152,27 +133,20 @@ function ResetPasswordForm() {
 
   return (
     <section className="rounded-2xl border border-input-border bg-surface p-6 sm:p-8">
-      <h1 className="font-display text-2xl font-semibold tracking-tight">
-        Crear nueva contraseña
-      </h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">Crear nueva contraseña</h1>
 
       <p className="mt-3 text-sm leading-6 text-muted">
-        Introduce una contraseña nueva para recuperar el acceso
-        a tu cuenta de StudyAI.
+        Introduce una contraseña nueva para recuperar el acceso a tu cuenta de StudyAI.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
         <div className="space-y-2">
-          <label
-            htmlFor="reset-new-password"
-            className="block text-sm font-medium"
-          >
+          <label htmlFor="reset-new-password" className="block text-sm font-medium">
             Nueva contraseña
           </label>
 
-          <input
+          <PasswordInput
             id="reset-new-password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={12}
@@ -187,22 +161,16 @@ function ResetPasswordForm() {
             className="min-h-12 w-full rounded-xl border border-input-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-60"
           />
 
-          <p className="text-xs text-muted">
-            Utiliza entre 12 y 128 caracteres.
-          </p>
+          <p className="text-xs text-muted">Utiliza entre 12 y 128 caracteres.</p>
         </div>
 
         <div className="space-y-2">
-          <label
-            htmlFor="reset-confirm-password"
-            className="block text-sm font-medium"
-          >
+          <label htmlFor="reset-confirm-password" className="block text-sm font-medium">
             Confirmar nueva contraseña
           </label>
 
-          <input
+          <PasswordInput
             id="reset-confirm-password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={12}
@@ -248,9 +216,7 @@ function ResetPasswordForm() {
             />
           )}
 
-          {isSubmitting
-            ? "Actualizando contraseña..."
-            : "Restablecer contraseña"}
+          {isSubmitting ? "Actualizando contraseña..." : "Restablecer contraseña"}
         </button>
       </form>
 
@@ -271,10 +237,7 @@ export default function ResetPasswordPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-5 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link
-            href="/"
-            className="font-display text-2xl font-bold tracking-tight"
-          >
+          <Link href="/" className="font-display text-2xl font-bold tracking-tight">
             Study<span className="text-primary">AI</span>
           </Link>
         </div>

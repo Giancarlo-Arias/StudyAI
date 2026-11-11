@@ -1,4 +1,5 @@
 import type { DashboardAchievement } from "@/types/dashboard";
+import { DashboardIcon } from "./dashboard-icon";
 
 interface AchievementsSectionProps {
   achievements: DashboardAchievement[];
@@ -12,23 +13,32 @@ function formatUnlockDate(value: string | null): string | null {
 
   return new Intl.DateTimeFormat("es-CR", {
     dateStyle: "medium",
+    timeZone: "America/Costa_Rica",
   }).format(date);
 }
 
 export function AchievementsSection({ achievements }: AchievementsSectionProps) {
   return (
-    <section className="mt-10" aria-labelledby="achievements-title">
-      <div>
-        <h2 id="achievements-title" className="font-display text-xl font-semibold">
-          Mis logros
-        </h2>
-        <p className="mt-2 text-sm text-muted">
-          Desbloquea logros mientras avanzas en tu aprendizaje.
-        </p>
+    <section data-reveal="" className="mt-6" aria-labelledby="achievements-title">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="achievements-title" className="text-lg font-semibold tracking-tight">
+            Mis logros
+          </h2>
+          <p className="mt-1 text-sm text-muted">Pequeños pasos que hacen la diferencia.</p>
+        </div>
+        {achievements.length > 0 && (
+          <p className="text-xs text-muted">
+            <span className="font-semibold text-foreground">
+              {achievements.filter((item) => item.unlocked).length}
+            </span>{" "}
+            de {achievements.length} desbloqueados
+          </p>
+        )}
       </div>
 
       {achievements.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-input-border bg-surface p-8 text-center text-sm text-muted">
+        <div className="workspace-panel mt-5 p-8 text-center text-sm text-muted">
           Todavía no hay logros disponibles.
         </div>
       ) : (
@@ -36,35 +46,42 @@ export function AchievementsSection({ achievements }: AchievementsSectionProps) 
           {achievements.map((achievement) => {
             const percentage = achievement.unlocked
               ? 100
-              : Math.min(100, Math.max(0, (achievement.current / Math.max(achievement.target, 1)) * 100));
+              : Math.min(
+                  100,
+                  Math.max(0, (achievement.current / Math.max(achievement.target, 1)) * 100),
+                );
 
             const unlockedDate = formatUnlockDate(achievement.unlocked_at);
 
             return (
               <article
                 key={achievement.code}
-                className="rounded-2xl border border-input-border bg-surface p-5"
+                data-unlocked={achievement.unlocked}
+                className="workspace-panel workspace-achievement flex flex-col p-4"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <svg width="23" height="23" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
-                      aria-hidden="true">
-                      <path d="M8 21h8m-4-4v4M7 3h10v8a5 5 0 0 1-10 0V3ZM7 5H4v3a4 4 0 0 0 4 4M17 5h3v3a4 4 0 0 1-4 4" />
-                    </svg>
+                  <div
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${achievement.unlocked ? "bg-accent-soft text-accent-foreground" : "bg-surface-soft text-muted"}`}
+                  >
+                    <DashboardIcon
+                      name={achievement.unlocked ? "trophy" : "lock"}
+                      className="size-5"
+                    />
                   </div>
 
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    achievement.unlocked
-                      ? "bg-primary/10 text-primary"
-                      : "bg-surface-soft text-muted"
-                  }`}>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      achievement.unlocked
+                        ? "bg-accent-soft text-accent-foreground"
+                        : "bg-surface-soft text-muted"
+                    }`}
+                  >
                     {achievement.unlocked ? "Desbloqueado" : "En progreso"}
                   </span>
                 </div>
 
-                <h3 className="mt-5 text-base font-semibold">{achievement.title}</h3>
-                <p className="mt-2 min-h-10 text-sm leading-5 text-muted">
+                <h3 className="mt-4 text-sm font-semibold">{achievement.title}</h3>
+                <p className="mt-2 min-h-10 flex-1 text-xs leading-5 text-muted">
                   {achievement.description}
                 </p>
 
@@ -81,18 +98,16 @@ export function AchievementsSection({ achievements }: AchievementsSectionProps) 
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(percentage)}
-                  className="mt-2 h-2 overflow-hidden rounded-full bg-surface-soft"
+                  className="workspace-progress mt-2"
                 >
                   <div
-                    className="h-full rounded-full bg-primary transition-[width] duration-300"
+                    className="h-full rounded-full bg-[var(--chart-primary)]"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
 
                 {achievement.unlocked && unlockedDate && (
-                  <p className="mt-4 text-xs text-muted">
-                    Desbloqueado el {unlockedDate}
-                  </p>
+                  <p className="mt-4 text-xs text-muted">Desbloqueado el {unlockedDate}</p>
                 )}
               </article>
             );

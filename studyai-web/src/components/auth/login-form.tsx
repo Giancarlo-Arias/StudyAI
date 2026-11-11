@@ -13,6 +13,9 @@ import {
 
 import { login, getCurrentUser } from "@/lib/auth";
 import { validateEmail, validatePassword } from "@/lib/validations/auth";
+import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
+import eyeIcon from "@/assets/icons/eye.svg";
+import eyeOffIcon from "@/assets/icons/eye-off.svg";
 
 const themes = [
   {
@@ -53,9 +56,7 @@ function Glyph({ path }: { path: string }) {
 function themeSnapshot() {
   const value = document.documentElement.dataset.theme;
 
-  return value === "light" || value === "dark"
-    ? value
-    : "system";
+  return value === "light" || value === "dark" ? value : "system";
 }
 
 function subscribeTheme(listener: () => void) {
@@ -86,11 +87,7 @@ function subscribeTheme(listener: () => void) {
 }
 
 export function ThemeControl() {
-  const theme = useSyncExternalStore(
-    subscribeTheme,
-    themeSnapshot,
-    () => "system",
-  );
+  const theme = useSyncExternalStore(subscribeTheme, themeSnapshot, () => "system");
 
   const transitionRef = useRef<ViewTransition | null>(null);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,11 +106,7 @@ export function ThemeControl() {
     };
   }, []);
 
-  function changeTheme(
-    value: string,
-    anchor: HTMLElement | null,
-    keyboard: boolean,
-  ) {
+  function changeTheme(value: string, anchor: HTMLElement | null, keyboard: boolean) {
     requestedThemeRef.current = value;
     transitionRef.current?.skipTransition();
 
@@ -127,13 +120,10 @@ export function ThemeControl() {
 
     root.classList.remove("theme-fallback");
 
-    const systemDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
+    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
     const isDark = (selection: string) =>
-      selection === "dark" ||
-      (selection === "system" && systemDark);
+      selection === "dark" || (selection === "system" && systemDark);
 
     const update = () => {
       const selected = requestedThemeRef.current;
@@ -144,8 +134,7 @@ export function ThemeControl() {
         root.setAttribute("data-theme", selected);
       }
 
-      const notify = () =>
-        window.dispatchEvent(new Event("studyai-theme-change"));
+      const notify = () => window.dispatchEvent(new Event("studyai-theme-change"));
 
       try {
         if (selected === "system") {
@@ -174,29 +163,19 @@ export function ThemeControl() {
       root.classList.add("theme-fallback");
       update();
 
-      fallbackTimerRef.current = setTimeout(
-        () => root.classList.remove("theme-fallback"),
-        500,
-      );
+      fallbackTimerRef.current = setTimeout(() => root.classList.remove("theme-fallback"), 500);
 
       return;
     }
 
     const rect = anchor?.getBoundingClientRect();
 
-    const x = rect
-      ? rect.left + rect.width / 2
-      : window.innerWidth / 2;
+    const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
 
-    const y = rect
-      ? rect.top + rect.height / 2
-      : 48;
+    const y = rect ? rect.top + rect.height / 2 : 48;
 
     const radius =
-      Math.hypot(
-        Math.max(x, window.innerWidth - x),
-        Math.max(y, window.innerHeight - y),
-      ) + 8;
+      Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y)) + 8;
 
     root.style.setProperty("--theme-origin-x", `${x}px`);
     root.style.setProperty("--theme-origin-y", `${y}px`);
@@ -218,9 +197,7 @@ export function ThemeControl() {
 
   return (
     <fieldset className="theme-switch relative isolate flex rounded-full p-1">
-      <legend className="sr-only">
-        Tema de la interfaz
-      </legend>
+      <legend className="sr-only">Tema de la interfaz</legend>
 
       <span
         aria-hidden="true"
@@ -249,9 +226,7 @@ export function ThemeControl() {
             }
           />
 
-          <span className="sr-only">
-            {item.label}
-          </span>
+          <span className="sr-only">{item.label}</span>
 
           <Glyph path={item.path} />
         </label>
@@ -263,13 +238,11 @@ export function ThemeControl() {
 const inputClass =
   "h-12 w-full rounded-xl border border-input-border bg-surface px-3.5 text-base text-foreground placeholder:text-muted hover:border-muted focus:border-primary focus:outline-2 focus:outline-offset-2 focus:outline-focus";
 
-const eyePath =
-  "M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0";
+type LoginFormProps = {
+  verified?: boolean;
+};
 
-const eyeOffPath =
-  "m3 3 18 18M10.6 5.1 12 5c7 0 10 7 10 7a19 19 0 0 0-3.2 4.2M6.2 6.2A20 20 0 0 0 2 12s3 7 10 7a12 12 0 0 0 5.8-1.8M10 10a3 3 0 0 0 4 4";
-
-export function LoginForm() {
+export function LoginForm({ verified = false }: LoginFormProps) {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -279,6 +252,8 @@ export function LoginForm() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState("");
+
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -321,6 +296,8 @@ export function LoginForm() {
     setPasswordError(nextPasswordError);
     setError("");
 
+    setUnverifiedEmail("");
+
     if (nextEmailError || nextPasswordError) {
       if (nextEmailError) {
         emailRef.current?.focus();
@@ -337,14 +314,14 @@ export function LoginForm() {
       const response = await login(email, password);
 
       if (!response.ok) {
-        if (response.status === 400 || response.status === 401) {
-          setError(
-            "No se pudo iniciar sesión. Verifica tus credenciales.",
-          );
+        if (response.status === 403) {
+          setError("Debes verificar tu correo electrónico para continuar.");
+
+          setUnverifiedEmail(email);
+        } else if (response.status === 400 || response.status === 401) {
+          setError("No se pudo iniciar sesión. Verifica tus credenciales.");
         } else {
-          setError(
-            "Ocurrió un error al iniciar sesión. Inténtalo nuevamente.",
-          );
+          setError("Ocurrió un error al iniciar sesión. Inténtalo nuevamente.");
         }
 
         return;
@@ -365,9 +342,7 @@ export function LoginForm() {
       const sessionResponse = await getCurrentUser();
 
       if (!sessionResponse.ok) {
-        setError(
-          "No se pudo verificar la sesión. Inténtalo nuevamente.",
-        );
+        setError("No se pudo verificar la sesión. Inténtalo nuevamente.");
         return;
       }
 
@@ -384,7 +359,9 @@ export function LoginForm() {
       setShowPassword(false);
 
       startTransition(() => {
-        router.replace("/dashboard", { transitionTypes: ["login-dashboard"] });
+        router.replace("/dashboard", {
+          transitionTypes: ["login-dashboard"],
+        });
       });
     } catch {
       setError("No se pudo conectar con el servidor.");
@@ -401,10 +378,29 @@ export function LoginForm() {
       noValidate
       onSubmit={handleSubmit}
     >
-      <label
-        className="block text-sm font-medium"
-        htmlFor="login-email"
-      >
+      {verified && (
+        <div
+          role="status"
+          className="mb-6 flex items-start gap-3 rounded-xl border border-primary/20 bg-accent-soft px-4 py-3 text-sm leading-6 text-accent-foreground"
+        >
+          <svg
+            className="mt-0.5 size-5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+
+          <span>Correo verificado correctamente. Ya puedes iniciar sesión.</span>
+        </div>
+      )}
+
+      <label className="block text-sm font-medium" htmlFor="login-email">
         Correo electrónico
       </label>
 
@@ -419,30 +415,23 @@ export function LoginForm() {
         spellCheck={false}
         autoCapitalize="none"
         aria-invalid={Boolean(emailError)}
-        aria-describedby={
-          emailError ? "login-email-error" : undefined
-        }
-        onBlur={(event) =>
-          setEmailError(validateEmail(event.target.value))
-        }
-        onChange={() => setEmailError("")}
+        aria-describedby={emailError ? "login-email-error" : undefined}
+        onBlur={(event) => setEmailError(validateEmail(event.target.value))}
+        onChange={() => {
+          setEmailError("");
+          setUnverifiedEmail("");
+          setError("");
+        }}
         required
       />
 
       {emailError && (
-        <p
-          id="login-email-error"
-          role="alert"
-          className="mt-2 text-sm text-red-500"
-        >
+        <p id="login-email-error" role="alert" className="mt-2 text-sm text-red-500">
           {emailError}
         </p>
       )}
 
-      <label
-        className="mt-5 block text-sm font-medium"
-        htmlFor="login-password"
-      >
+      <label className="mt-5 block text-sm font-medium" htmlFor="login-password">
         Contraseña
       </label>
 
@@ -456,14 +445,8 @@ export function LoginForm() {
           autoComplete="current-password"
           placeholder="Tu contraseña"
           aria-invalid={Boolean(passwordError)}
-          aria-describedby={
-            passwordError ? "login-password-error" : undefined
-          }
-          onBlur={(event) =>
-            setPasswordError(
-              validatePassword(event.target.value),
-            )
-          }
+          aria-describedby={passwordError ? "login-password-error" : undefined}
+          onBlur={(event) => setPasswordError(validatePassword(event.target.value))}
           onChange={() => setPasswordError("")}
           required
         />
@@ -471,25 +454,21 @@ export function LoginForm() {
         <button
           className="password-toggle absolute top-0.5 right-0.5 flex size-11 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-surface-soft hover:text-foreground"
           type="button"
-          aria-label={
-            showPassword
-              ? "Ocultar contraseña"
-              : "Mostrar contraseña"
-          }
+          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
           aria-controls="login-password"
           aria-pressed={showPassword}
           onClick={() => setShowPassword(!showPassword)}
         >
-          <Glyph path={showPassword ? eyePath : eyeOffPath} />
+          <span
+            aria-hidden="true"
+            className="dashboard-icon size-[18px]"
+            style={{ maskImage: `url(${showPassword ? eyeIcon.src : eyeOffIcon.src})` }}
+          />
         </button>
       </div>
 
       {passwordError && (
-        <p
-          id="login-password-error"
-          role="alert"
-          className="mt-2 text-sm text-red-500"
-        >
+        <p id="login-password-error" role="alert" className="mt-2 text-sm text-red-500">
           {passwordError}
         </p>
       )}
@@ -508,41 +487,36 @@ export function LoginForm() {
         type="submit"
         disabled={isSubmitting || isNavigating}
       >
-        {isSubmitting || isNavigating
-          ? "Iniciando sesión..."
-          : "Iniciar sesión"}
+        {isSubmitting || isNavigating ? "Iniciando sesión..." : "Iniciar sesión"}
 
-        {!isSubmitting && !isNavigating && (
-          <Glyph path="M5 12h14m-6-6 6 6-6 6" />
-        )}
+        {!isSubmitting && !isNavigating && <DashboardIcon name="arrow" className="size-[18px]" />}
       </button>
 
       {error && (
-        <p
-          role="alert"
-          className="mt-4 text-center text-sm text-red-500"
-        >
+        <p role="alert" className="mt-4 text-center text-sm text-red-500">
           {error}
+        </p>
+      )}
+
+      {unverifiedEmail && (
+        <p className="mt-3 text-center text-sm">
+          <Link
+            href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+            className="inline-flex min-h-11 items-center justify-center font-medium text-primary transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+          >
+            Verificar ahora
+          </Link>
         </p>
       )}
 
       <p className="mt-6 text-center text-sm text-muted">
         ¿No tienes cuenta?{" "}
-        <span
-          role="link"
-          aria-disabled="true"
-          aria-describedby="unavailable"
-          className="cursor-not-allowed font-medium text-foreground"
+        <Link
+          href="/register"
+          className="font-medium text-primary transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
         >
           Crear cuenta
-        </span>
-      </p>
-
-      <p
-        id="unavailable"
-        className="mt-5 text-center text-xs leading-5 text-muted"
-      >
-        El registro de nuevas cuentas estará disponible próximamente.
+        </Link>
       </p>
     </form>
   );

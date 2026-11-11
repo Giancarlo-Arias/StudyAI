@@ -1,24 +1,30 @@
-﻿@import "tailwindcss";
+@import "tailwindcss" source("../");
 
 :root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   color-scheme: light dark;
-  --background: light-dark(#f8f9fc, #101015);
-  --foreground: light-dark(#20222d, #f5f5f5);
-  --surface: light-dark(#ffffff, #15151d);
-  --surface-raised: light-dark(#ffffff, #1d1c29);
-  --surface-soft: light-dark(#f0f1f7, #22212e);
-  --primary: light-dark(#5145cd, #6558d3);
+  --background: light-dark(#f2f4fb, #111527);
+  --foreground: light-dark(#28273f, #eef0ff);
+  --surface: light-dark(#ffffff, #1c223a);
+  --surface-raised: light-dark(#ffffff, #262d49);
+  --surface-soft: light-dark(#e9edf7, #29314c);
+  --primary: light-dark(#6256d9, #6557d4);
   --primary-foreground: #ffffff;
-  --accent-foreground: light-dark(#5145cd, #bdb6f5);
-  --muted: light-dark(#636879, #b4b1c3);
-  --border: light-dark(#dfe1ea, #343140);
-  --input-border: light-dark(#888ea0, #777285);
-  --accent-soft: light-dark(#eeecff, #2b273d);
+  --accent-foreground: light-dark(#5847ba, #c2b8ff);
+  --muted: light-dark(#636a82, #a8b1cd);
+  --border: light-dark(#d7ddeb, #343d5b);
+  --input-border: light-dark(#8189a1, #7884a1);
+  --accent-soft: light-dark(#eae5fc, #383057);
   --focus: var(--accent-foreground);
 }
 
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
 
 @theme inline {
   --color-background: var(--background);
@@ -40,15 +46,121 @@
 }
 
 @layer base {
-  html { background-color: var(--background); }
-  ::selection { background: var(--accent-soft); color: var(--foreground); }
-  :focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
-  button, select { touch-action: manipulation; }
-  input { caret-color: var(--primary); }
-  svg { flex-shrink: 0; }
+  html {
+    background-color: var(--background);
+  }
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 4px;
+  }
+  button,
+  select {
+    touch-action: manipulation;
+  }
+  input {
+    caret-color: var(--primary);
+  }
+  svg {
+    flex-shrink: 0;
+  }
 }
 
-::view-transition { pointer-events: none; }
+.dashboard-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  vertical-align: middle;
+}
+.ambient-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+.ambient-field-wash {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse at 78% 22%, light-dark(#c2b4ed75, #5c42844a), transparent 56%),
+    radial-gradient(ellipse at 24% 76%, light-dark(#a1ced665, #23617836), transparent 54%);
+}
+.ambient-field-flow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(120vw, 160svh);
+  aspect-ratio: 8 / 5;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  background: linear-gradient(
+    100deg,
+    transparent 5%,
+    light-dark(#8872c7, #a48bdb) 35%,
+    light-dark(#74b1c4, #6caec6) 68%,
+    transparent 95%
+  );
+  opacity: 0.62;
+  transform: translate3d(-50%, -50%, 0) rotate(-8deg);
+}
+.ambient-field-flow--far {
+  opacity: 0.32;
+  transform: translate3d(-48%, -52%, 0) rotate(170deg);
+}
+.ambient-field--auth .ambient-field-flow {
+  opacity: 0.45;
+}
+.login-scene > header,
+.login-scene > main,
+.login-scene > footer {
+  position: relative;
+  z-index: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ambient-field-wash {
+    animation: ambient-wash-drift 20s ease-in-out -6s infinite alternate;
+  }
+  .ambient-field-flow {
+    animation: ambient-flow-drift 16s ease-in-out -3s infinite alternate;
+  }
+  .ambient-field-flow--far {
+    animation: ambient-flow-return 22s ease-in-out -8s infinite alternate;
+  }
+  @keyframes ambient-wash-drift {
+    to {
+      transform: translate3d(-5%, 4%, 0) scale(1.08);
+    }
+  }
+  @keyframes ambient-flow-drift {
+    to {
+      transform: translate3d(-46%, -54%, 0) rotate(-2deg);
+      opacity: 0.4;
+    }
+  }
+  @keyframes ambient-flow-return {
+    to {
+      transform: translate3d(-54%, -46%, 0) rotate(182deg);
+      opacity: 0.5;
+    }
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .ambient-field {
+    opacity: 0.18;
+  }
+}
+
+::view-transition {
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(.login-exit) {
@@ -80,21 +192,36 @@
   }
 
   @keyframes login-exit {
-    to { opacity: 0; transform: translateY(-4px); }
+    to {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
   }
 
   @keyframes dashboard-enter {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes document-content-out {
-    to { opacity: 0; }
+    to {
+      opacity: 0;
+    }
   }
 
   @keyframes document-content-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }
 
@@ -106,25 +233,29 @@
   ::view-transition-old(.login-exit),
   ::view-transition-new(.dashboard-enter),
   ::view-transition-old(.document-content),
-  ::view-transition-new(.document-content) { animation: none; }
+  ::view-transition-new(.document-content) {
+    animation: none;
+  }
   ::view-transition-old(.loading-reveal),
-  ::view-transition-new(.loading-reveal) { animation: none; }
+  ::view-transition-new(.loading-reveal) {
+    animation: none;
+  }
 }
 
-.dashboard-shell :is(nav, main) {
+.dashboard-shell main {
   padding-left: max(1.25rem, env(safe-area-inset-left));
   padding-right: max(1.25rem, env(safe-area-inset-right));
 }
 
 @media (min-width: 40rem) {
-  .dashboard-shell :is(nav, main) {
+  .dashboard-shell main {
     padding-left: max(2rem, env(safe-area-inset-left));
     padding-right: max(2rem, env(safe-area-inset-right));
   }
 }
 
 @media (min-width: 64rem) {
-  .dashboard-shell :is(nav, main) {
+  .dashboard-shell main {
     padding-left: max(3rem, env(safe-area-inset-left));
     padding-right: max(3rem, env(safe-area-inset-right));
   }

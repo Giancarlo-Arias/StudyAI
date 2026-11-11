@@ -1,16 +1,14 @@
 "use client";
+import { DashboardReveal } from "@/components/dashboard/dashboard-reveal";
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import {
-  getDocuments,
-  uploadDocument,
-  deleteDocument,
-} from "@/lib/documents";
+import { getDocuments, uploadDocument, deleteDocument } from "@/lib/documents";
 
 import { TrashIcon } from "@/assets/icons/trash";
 import { DocumentsListSkeleton } from "@/components/dashboard/documents-skeleton";
+import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
 import type { StudyDocument } from "@/types/documents";
 
 const PAGE_SIZE = 10;
@@ -47,8 +45,7 @@ export function DocumentsManager() {
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const [documentToDelete, setDocumentToDelete] =
-    useState<StudyDocument | null>(null);
+  const [documentToDelete, setDocumentToDelete] = useState<StudyDocument | null>(null);
 
   const [deleteError, setDeleteError] = useState("");
   const [error, setError] = useState("");
@@ -64,11 +61,7 @@ export function DocumentsManager() {
 
     async function loadDocuments() {
       try {
-        const data = await getDocuments(
-          page * PAGE_SIZE,
-          PAGE_SIZE + 1,
-          controller.signal,
-        );
+        const data = await getDocuments(page * PAGE_SIZE, PAGE_SIZE + 1, controller.signal);
 
         if (controller.signal.aborted) return;
 
@@ -122,9 +115,7 @@ export function DocumentsManager() {
     }
 
     if (file.size === 0 || file.size > MAX_FILE_SIZE) {
-      setError(
-        "El archivo debe tener un tamaño mayor que 0 y máximo de 5 MB.",
-      );
+      setError("El archivo debe tener un tamaño mayor que 0 y máximo de 5 MB.");
       return;
     }
 
@@ -133,9 +124,7 @@ export function DocumentsManager() {
     try {
       const result = await uploadDocument(file);
 
-      setNotice(
-        `El documento "${result.filename}" se subió correctamente.`,
-      );
+      setNotice(`El documento "${result.filename}" se subió correctamente.`);
 
       setFile(null);
 
@@ -145,11 +134,7 @@ export function DocumentsManager() {
 
       refreshDocuments(true);
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudo subir el PDF.",
-      );
+      setError(caught instanceof Error ? caught.message : "No se pudo subir el PDF.");
     } finally {
       setIsUploading(false);
     }
@@ -267,9 +252,7 @@ export function DocumentsManager() {
 
       closeDeleteDialog(true);
 
-      setNotice(
-        `Documento "${document.filename}" eliminado correctamente.`,
-      );
+      setNotice(`Documento "${document.filename}" eliminado correctamente.`);
 
       if (documents.length === 1 && page > 0) {
         setIsLoading(true);
@@ -278,33 +261,28 @@ export function DocumentsManager() {
         refreshDocuments();
       }
     } catch (caught) {
-      setDeleteError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudo eliminar el PDF.",
-      );
+      setDeleteError(caught instanceof Error ? caught.message : "No se pudo eliminar el PDF.");
     } finally {
       setDeletingId(null);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-input-border bg-surface p-5 sm:p-6">
-        <h2 className="font-display text-lg font-semibold">
-          Subir documento
-        </h2>
+    <DashboardReveal className="space-y-5">
+      <section className="workspace-panel p-5 sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="workspace-file-symbol !h-11">
+            <DashboardIcon name="upload" className="size-5" />
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold">Añade tu próximo documento</h2>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              PDF con texto extraíble · Hasta 5 MB
+            </p>
+          </div>
+        </div>
 
-        <p className="mt-2 text-sm text-muted">
-          Selecciona un PDF con texto extraíble. Tamaño máximo: 5 MB.
-        </p>
-
-        <form
-          method="post"
-          encType="multipart/form-data"
-          onSubmit={handleUpload}
-          className="mt-5"
-        >
+        <form method="post" encType="multipart/form-data" onSubmit={handleUpload} className="mt-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <input
               ref={fileInputRef}
@@ -318,13 +296,13 @@ export function DocumentsManager() {
                 setError("");
                 setNotice("");
               }}
-              className="min-w-0 flex-1 cursor-pointer rounded-xl border border-input-border bg-background p-3 text-sm text-foreground file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:font-medium file:text-primary"
+              className="workspace-field min-w-0 flex-1 cursor-pointer !p-2.5 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-xs file:font-medium file:text-accent-foreground"
             />
 
             <button
               type="submit"
               disabled={!file || isUploading}
-              className="min-h-12 cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-[filter,box-shadow] duration-200 hover:brightness-110 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 enabled:active:scale-[0.98] motion-reduce:transition-none"
+              className="workspace-action workspace-action-primary"
             >
               {isUploading ? (
                 <span className="inline-flex items-center gap-3">
@@ -357,21 +335,15 @@ export function DocumentsManager() {
         </p>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-input-border bg-surface">
+      <section className="workspace-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-input-border p-5 sm:p-6">
           <div>
-            <h2 className="font-display text-lg font-semibold">
-              Mis documentos
-            </h2>
+            <h2 className="font-display text-lg font-semibold">Mis documentos</h2>
 
-            <p className="mt-1 text-sm text-muted">
-              Archivos guardados en StudyAI.
-            </p>
+            <p className="mt-1 text-sm text-muted">Archivos guardados en StudyAI.</p>
           </div>
 
-          <span className="text-xs text-muted">
-            Página {page + 1}
-          </span>
+          <span className="text-xs text-muted">Página {page + 1}</span>
         </div>
 
         {isLoading ? (
@@ -381,33 +353,41 @@ export function DocumentsManager() {
             Todavía no tienes documentos en esta página.
           </p>
         ) : (
-          <div className="divide-y divide-input-border">
+          <DashboardReveal
+            key={page + ":" + documents.map((item) => item.id).join()}
+            className="divide-y divide-border/60"
+          >
             {documents.map((document) => (
               <article
                 key={document.id}
+                data-reveal=""
                 className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
-                  <h3 className="break-words text-sm font-semibold">
-                    <Link
-                      href={`/dashboard/documents/${encodeURIComponent(document.id)}`}
-                      className="rounded-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                    >
-                      {document.filename}
-                    </Link>
-                  </h3>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="workspace-file-symbol">
+                    <DashboardIcon name="document" className="size-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="break-words text-sm font-semibold">
+                      <Link
+                        href={`/dashboard/documents/${encodeURIComponent(document.id)}`}
+                        className="rounded-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      >
+                        {document.filename}
+                      </Link>
+                    </h3>
 
-                  <p className="mt-2 text-xs leading-5 text-muted">
-                    {formatFileSize(document.size_bytes)} ·{" "}
-                    {document.pages_with_text} páginas con texto ·{" "}
-                    {formatDate(document.created_at)}
-                  </p>
+                    <p className="mt-2 text-xs leading-5 text-muted">
+                      {formatFileSize(document.size_bytes)} · {document.pages_with_text} páginas con
+                      texto · {formatDate(document.created_at)}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
                   <Link
                     href={`/dashboard/documents/${encodeURIComponent(document.id)}`}
-                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-input-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-[background-color,border-color,transform] duration-200 hover:border-primary/40 hover:bg-accent-soft enabled:active:scale-[0.98] motion-reduce:transition-none"
+                    className="workspace-action"
                     aria-label={`Ver contenido de ${document.filename}`}
                   >
                     Ver contenido
@@ -424,7 +404,7 @@ export function DocumentsManager() {
                 </div>
               </article>
             ))}
-          </div>
+          </DashboardReveal>
         )}
 
         <div className="flex items-center justify-between gap-4 border-t border-input-border p-5">
@@ -435,14 +415,12 @@ export function DocumentsManager() {
               setIsLoading(true);
               setPage((value) => value - 1);
             }}
-            className="cursor-pointer rounded-xl border border-input-border px-4 py-2 text-sm transition-colors hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40"
+            className="workspace-action"
           >
             Anterior
           </button>
 
-          <span className="text-xs text-muted">
-            Página {page + 1}
-          </span>
+          <span className="text-xs text-muted">Página {page + 1}</span>
 
           <button
             type="button"
@@ -451,7 +429,7 @@ export function DocumentsManager() {
               setIsLoading(true);
               setPage((value) => value + 1);
             }}
-            className="cursor-pointer rounded-xl border border-input-border px-4 py-2 text-sm transition-colors hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-40"
+            className="workspace-action"
           >
             Siguiente
           </button>
@@ -509,12 +487,8 @@ export function DocumentsManager() {
             </div>
           </div>
 
-          <p
-            id="delete-document-description"
-            className="mt-6 text-sm leading-6 text-muted"
-          >
-            ¿Estás seguro de que deseas eliminar este documento
-            de tu biblioteca?
+          <p id="delete-document-description" className="mt-6 text-sm leading-6 text-muted">
+            ¿Estás seguro de que deseas eliminar este documento de tu biblioteca?
           </p>
 
           <div className="mt-4 rounded-xl border border-input-border bg-surface-soft px-4 py-3">
@@ -524,8 +498,7 @@ export function DocumentsManager() {
           </div>
 
           <p className="mt-3 text-xs leading-5 text-muted">
-            Se eliminarán los datos asociados al documento.
-            Esta acción no se puede deshacer.
+            Se eliminarán los datos asociados al documento. Esta acción no se puede deshacer.
           </p>
 
           {deleteError && (
@@ -543,7 +516,7 @@ export function DocumentsManager() {
               autoFocus
               onClick={() => closeDeleteDialog()}
               disabled={deletingId !== null}
-              className="min-h-11 cursor-pointer rounded-xl border border-input-border px-5 py-2.5 text-sm font-semibold transition-[background-color,transform] duration-200 hover:bg-surface-soft enabled:active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+              className="workspace-action"
             >
               Cancelar
             </button>
@@ -566,6 +539,6 @@ export function DocumentsManager() {
           </div>
         </div>
       </dialog>
-    </div>
+    </DashboardReveal>
   );
 }
