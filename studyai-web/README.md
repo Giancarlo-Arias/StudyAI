@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StudyAI Web
 
-## Getting Started
+Frontend de **StudyAI**, una plataforma de aprendizaje que ayuda a estudiantes y personas autodidactas a transformar documentos PDF en cuestionarios y herramientas de estudio con inteligencia artificial.
 
-First, run the development server:
+La aplicación se conecta a [StudyAI API](../studyai-api/README.md), que procesa los documentos, genera cuestionarios con RAG y gestiona los resultados y el progreso de cada usuario.
+
+## Funcionalidades
+
+- **Cuenta:** registro, verificación de correo, inicio y cierre de sesión, recuperación de contraseña y perfil de usuario.
+- **Documentos:** carga y administración de archivos PDF, consulta de su contenido y acceso a los cuestionarios asociados.
+- **Cuestionarios:** generación a partir de un documento, con selección de título, dificultad y cantidad de preguntas.
+- **Evaluaciones:** resolución de cuestionarios, consulta de resultados, historial de intentos y revisión de respuestas.
+- **Dashboard:** resumen de actividad, resultados, progreso por documento y logros.
+- **Experiencia adaptable:** interfaz responsive, modos claro y oscuro, preferencia del sistema y soporte para movimiento reducido.
+
+## Tecnologías
+
+| Categoría | Tecnología |
+| --- | --- |
+| Framework | Next.js 16 con App Router |
+| Interfaz | React 19 y TypeScript |
+| Estilos | Tailwind CSS 4 y CSS |
+| Gráficas | Recharts |
+| Tipografía | Geist, Geist Mono y Poppins |
+| Gestor de paquetes | pnpm |
+| Backend | FastAPI, PostgreSQL y pgvector |
+
+El proyecto utiliza Server Components, Route Handlers, Cache Components, Partial Prefetching y React Compiler. Las animaciones y los controles interactivos se implementan en componentes cliente cuando son necesarios.
+
+## Requisitos
+
+- Node.js 20.9 o superior.
+- pnpm 12.16.1. Si tienes Corepack disponible, puedes activarlo con `corepack enable`.
+- [StudyAI API](../studyai-api/README.md) configurada y en ejecución para usar las funciones conectadas.
+
+## Instalación
+
+Desde la raíz del repositorio:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd studyai-web
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crea un archivo `.env.local` dentro de `studyai-web` y configura la dirección base de la API, incluido su prefijo:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```dotenv
+API_BASE_URL=http://127.0.0.1:8000/api/v1
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+La dirección debe ser accesible desde el servidor que ejecuta Next.js. Si el backend utiliza otro host o puerto, ajusta el valor. `API_BASE_URL` se utiliza en el servidor y no requiere el prefijo `NEXT_PUBLIC_`.
 
-## Learn More
+Inicia el servidor de desarrollo:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Abre [http://localhost:3000](http://localhost:3000). Para configurar PostgreSQL, el correo y la generación con IA, sigue las instrucciones del [backend](../studyai-api/README.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Comandos
 
-## Deploy on Vercel
+Ejecuta estos comandos desde `studyai-web`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm dev                # Desarrollo
+pnpm exec tsc --noEmit  # Comprobación de tipos
+pnpm lint               # ESLint
+pnpm build              # Compilación de producción
+pnpm start              # Servidor de producción, después del build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Estructura
+
+```text
+studyai-web/
+├── src/
+│   ├── app/          # Rutas, layouts y Route Handlers de Next.js
+│   ├── assets/       # Iconos, fuentes y recursos visuales
+│   ├── components/   # Componentes de interfaz
+│   ├── lib/          # Acceso a la API, sesión y validaciones
+│   └── types/        # Tipos de datos compartidos
+├── public/           # Archivos estáticos
+├── next.config.ts    # Configuración de Next.js
+├── package.json
+└── pnpm-lock.yaml
+```
+
+## Autenticación y comunicación con la API
+
+El navegador interactúa con rutas de Next.js para las operaciones que necesitan el backend. La aplicación mantiene el token de sesión en una cookie HttpOnly y realiza las llamadas autenticadas desde el servidor. Los módulos marcados como `server-only` mantienen la configuración privada fuera del código cliente.
+
+Los archivos `.env.local` y otros archivos de entorno están excluidos de Git. No subas secretos, credenciales ni tokens al repositorio.
+
+## Estado del proyecto
+
+StudyAI está en desarrollo. El frontend incluye las vistas principales de autenticación, documentos, cuestionarios y seguimiento; su funcionamiento completo requiere el backend y sus servicios configurados.
