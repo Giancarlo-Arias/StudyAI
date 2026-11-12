@@ -88,28 +88,20 @@ export function useRevealReady(ref: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     if (!cycle || !ref.current?.getClientRects().length) return;
     let cancelled = false;
-    let timer = 0;
     const cancel = afterViewTransition(() => {
-      const card =
-        ref.current?.closest<HTMLElement>("[data-reveal]") ??
-        ref.current?.querySelector<HTMLElement>("[data-reveal]");
-      const animation = card?.getAnimations()[0];
-      const timing = animation?.effect?.getComputedTiming();
-      const elapsed = typeof animation?.currentTime === "number" ? animation.currentTime : 0;
-      const delay = timing
-        ? Math.max(0, Number(timing.delay) + Number(timing.duration) * 0.25 - elapsed)
-        : 0;
-      timer = window.setTimeout(
-        () => {
-          if (!cancelled) setReadyFor(cycle);
-        },
-        reducedMotion ? 0 : delay,
-      );
+      const node = ref.current;
+      const card = node?.closest<HTMLElement>(".workspace-panel, [data-reveal]");
+      const cards = card
+        ? [card]
+        : Array.from(node?.querySelectorAll<HTMLElement>('[data-reveal="container"]') ?? []);
+      const animations = cards.flatMap((element) => element.getAnimations());
+      void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+        if (!cancelled) setReadyFor(cycle);
+      });
     });
     return () => {
       cancelled = true;
       cancel();
-      clearTimeout(timer);
     };
   }, [ref, reducedMotion, cycle]);
 
@@ -165,9 +157,11 @@ export function AnimatedMetric({
 export function DashboardReveal({
   children,
   className,
+  containerEntrance = false,
 }: {
   children: ReactNode;
   className?: string;
+  containerEntrance?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useDashboardReducedMotion();
@@ -175,57 +169,103 @@ export function DashboardReveal({
 
   useLayoutEffect(() => {
     const root = rootRef.current;
+    if (!root) return;
     if (
-      !root ||
       !cycle ||
       !root.getClientRects().length ||
       document.visibilityState === "hidden" ||
       reducedMotion ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
+    ) {
+      if (containerEntrance) root.dataset.containerEntrance = "ready";
       return;
+    }
 
-    const explicit = root.querySelectorAll<HTMLElement>("[data-reveal]");
-    const candidates = Array.from(
-      explicit.length ? explicit : root.querySelectorAll<HTMLElement>("header, .workspace-panel"),
-    );
-    const owned = candidates.filter((element) => element.closest("[data-reveal-root]") === root);
+    const owns = (element: HTMLElement) => element.closest("[data-reveal-root]") === root;
+    const explicit = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]")).filter(owns);
+    const owned = explicit.length
+      ? explicit
+      : Array.from(root.querySelectorAll<HTMLElement>("header, .workspace-panel")).filter(owns);
     const elements = owned.filter(
       (element) => !owned.some((parent) => parent !== element && parent.contains(element)),
     );
-    const delays = [0, 34, 62, 84, 102, 118, 140, 156, 170];
-    const animations = elements.map((element, index) =>
-      element.animate(
+    const delays = containerEntrance ? [0, 70, 120, 160] : [0, 34, 62, 84, 102, 118, 140, 156, 170];
+    const contentAnimations: Animation[] = [];
+    const animations = elements.map((element, index) => {
+      const isContainer = containerEntrance && element.classList.contains("workspace-panel");
+      const duration = isContainer ? 760 : element.dataset.reveal === "text" ? 420 : 280;
+      const delay = delays[Math.min(index, delays.length - 1)];
+      if (isContainer) {
+        const specified = Array.from(
+          element.querySelectorAll<HTMLElement>("[data-reveal-content]"),
+        ).filter((child) => child.closest(".workspace-panel") === element);
+        (specified.length ? specified : Array.from(element.children))
+          .filter((child): child is HTMLElement => child instanceof HTMLElement)
+          .forEach((child, childIndex) => {
+            const animation = child.animate(
+              [
+                { opacity: 0, transform: "translateY(10px)" },
+                { opacity: 1, transform: "none" },
+              ],
+              {
+                duration: 380,
+                delay: delay + duration + [0, 55, 100, 135, 165, 185][Math.min(childIndex, 5)],
+                easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+                fill: "backwards",
+              },
+            );
+            animation.pause();
+            contentAnimations.push(animation);
+          });
+      }
+      return element.animate(
         [
           {
             opacity: 0,
-            transform:
-              element.dataset.reveal === "fade"
+            transform: isContainer
+              ? "scale(0.45)"
+              : element.dataset.reveal === "fade"
                 ? "none"
                 : `translateY(${element.dataset.reveal === "text" ? 12 : 8}px)`,
           },
-          { opacity: 1, transform: "translateY(0)" },
+          { opacity: 1, transform: isContainer ? "scale(1)" : "translateY(0)" },
         ],
         {
-          duration: element.dataset.reveal === "text" ? 300 : 280,
-          delay: delays[Math.min(index, delays.length - 1)],
-          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+          duration,
+          delay,
+          easing: isContainer ? "cubic-bezier(0.32, 0.72, 0, 1)" : "cubic-bezier(0.23, 1, 0.32, 1)",
           fill: "backwards",
         },
-      ),
-    );
+      );
+    });
+    animations.push(...contentAnimations);
 
     animations.forEach((animation) => animation.pause());
+    if (containerEntrance) root.dataset.containerEntrance = "ready";
     const cancel = afterViewTransition(() => animations.forEach((animation) => animation.play()));
 
     return () => {
       cancel();
       animations.forEach((animation) => animation.cancel());
     };
-  }, [reducedMotion, cycle]);
+  }, [reducedMotion, cycle, containerEntrance]);
 
   return (
-    <div ref={rootRef} data-reveal-root="" className={className}>
+    <div
+      ref={rootRef}
+      data-reveal-root=""
+      data-container-entrance={containerEntrance ? "pending" : undefined}
+      className={className}
+    >
+      {containerEntrance && (
+        <noscript>
+          <style>
+            {
+              '[data-container-entrance="pending"] .workspace-panel, [data-container-entrance="pending"] [data-reveal="text"] { opacity: 1 !important; transform: none !important; }'
+            }
+          </style>
+        </noscript>
+      )}
       {children}
     </div>
   );

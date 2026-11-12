@@ -292,12 +292,15 @@ export default function ProfilePage() {
           </button>
         </section>
       ) : (
-        <DashboardReveal className="workspace-profile-content">
-          <header data-reveal="text" className="mb-5">
-            <h1 className="font-display text-2xl font-semibold leading-tight tracking-[-.035em] sm:text-[1.75rem]">
+        <DashboardReveal className="workspace-profile-content" containerEntrance>
+          <header className="mb-5">
+            <h1
+              data-reveal="text"
+              className="font-display text-2xl font-semibold leading-tight tracking-[-.035em] sm:text-[1.75rem]"
+            >
               Mi perfil
             </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
+            <p data-reveal="text" className="mt-2 text-sm leading-6 text-muted">
               Tu información y la seguridad de tu cuenta.
             </p>
           </header>

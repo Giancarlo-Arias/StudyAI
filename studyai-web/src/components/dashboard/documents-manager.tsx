@@ -268,21 +268,29 @@ export function DocumentsManager() {
   }
 
   return (
-    <DashboardReveal className="space-y-5">
+    <DashboardReveal className="space-y-5" containerEntrance>
       <section className="workspace-panel p-5 sm:p-6">
         <div className="flex items-center gap-3">
-          <span className="workspace-file-symbol !h-11">
+          <span data-reveal-content="" className="workspace-file-symbol !h-11">
             <DashboardIcon name="upload" className="size-5" />
           </span>
           <div>
-            <h2 className="text-sm font-semibold">Añade tu próximo documento</h2>
-            <p className="mt-1 text-xs leading-5 text-muted">
+            <h2 data-reveal-content="" className="text-sm font-semibold">
+              Añade tu próximo documento
+            </h2>
+            <p data-reveal-content="" className="mt-1 text-xs leading-5 text-muted">
               PDF con texto extraíble · Hasta 5 MB
             </p>
           </div>
         </div>
 
-        <form method="post" encType="multipart/form-data" onSubmit={handleUpload} className="mt-5">
+        <form
+          data-reveal-content=""
+          method="post"
+          encType="multipart/form-data"
+          onSubmit={handleUpload}
+          className="mt-5"
+        >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <input
               ref={fileInputRef}

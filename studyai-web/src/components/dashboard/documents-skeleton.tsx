@@ -1,5 +1,44 @@
 const skeletonRows = ["document-a", "document-b", "document-c"] as const;
 
+export function DocumentsPageSkeleton() {
+  return (
+    <div role="status" aria-label="Cargando biblioteca" className="space-y-5">
+      <span className="sr-only">Cargando biblioteca</span>
+      <div aria-hidden="true" className="animate-pulse motion-reduce:animate-none">
+        <div className="h-4 w-36 rounded-md bg-surface-soft" />
+        <div className="mt-3 h-8 w-56 rounded-lg bg-surface-soft" />
+        <div className="mt-3 h-5 w-full max-w-lg rounded-md bg-surface-soft" />
+      </div>
+      <div
+        aria-hidden="true"
+        className="workspace-panel animate-pulse p-5 motion-reduce:animate-none sm:p-6"
+      >
+        <div className="flex items-center gap-3">
+          <div className="size-11 shrink-0 rounded-xl bg-surface-soft" />
+          <div className="min-w-0 flex-1">
+            <div className="h-4 w-52 max-w-full rounded-md bg-surface-soft" />
+            <div className="mt-2 h-4 w-64 max-w-full rounded-md bg-surface-soft" />
+          </div>
+        </div>
+        <div className="mt-5 flex flex-col gap-4 sm:flex-row">
+          <div className="h-12 flex-1 rounded-xl bg-surface-soft" />
+          <div className="h-12 w-full rounded-xl bg-surface-soft sm:w-40" />
+        </div>
+      </div>
+      <div className="workspace-panel overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="animate-pulse border-b border-border p-5 motion-reduce:animate-none"
+        >
+          <div className="h-6 w-44 rounded-md bg-surface-soft" />
+          <div className="mt-2 h-4 w-52 rounded-md bg-surface-soft" />
+        </div>
+        <DocumentsListSkeleton />
+      </div>
+    </div>
+  );
+}
+
 export function DocumentDetailSkeleton() {
   return (
     <div role="status" aria-label="Cargando documento">

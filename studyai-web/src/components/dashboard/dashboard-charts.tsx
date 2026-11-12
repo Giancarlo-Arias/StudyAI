@@ -17,12 +17,7 @@ import {
 } from "recharts";
 import type { DashboardDocument, DashboardProgress } from "@/types/dashboard";
 import { DashboardIcon } from "./dashboard-icon";
-import {
-  AnimatedMetric,
-  DashboardReveal,
-  useDashboardReducedMotion,
-  useRevealReady,
-} from "./dashboard-reveal";
+import { DashboardReveal, useDashboardReducedMotion, useRevealReady } from "./dashboard-reveal";
 
 type ResultPoint = {
   id: string;
@@ -168,10 +163,10 @@ export function DashboardCharts({
 
   return (
     <div ref={rootRef} data-charts-ready={ready}>
-      <DashboardReveal className="workspace-analytics">
+      <DashboardReveal className="workspace-analytics" containerEntrance>
         <div className="workspace-chart-grid">
           <section
-            data-reveal=""
+            data-reveal="container"
             className="workspace-panel workspace-chart-panel overflow-hidden"
             aria-labelledby={id + "-evolution"}
           >
@@ -354,7 +349,7 @@ export function DashboardCharts({
           </section>
 
           <section
-            data-reveal=""
+            data-reveal="container"
             className="workspace-panel workspace-progress-panel overflow-hidden"
             aria-labelledby={id + "-completion"}
           >
@@ -436,11 +431,11 @@ export function DashboardCharts({
 
         <div className="workspace-chart-row">
           <section
-            data-reveal=""
+            data-reveal="container"
             className="workspace-panel workspace-ranking-panel overflow-hidden"
             aria-labelledby={id + "-documents"}
           >
-            <div className="workspace-panel-heading">
+            <div data-reveal-content="" className="workspace-panel-heading">
               <div>
                 <h3 id={id + "-documents"} className="workspace-panel-title">
                   Rendimiento por documento
@@ -454,7 +449,7 @@ export function DashboardCharts({
               </span>
             </div>
             {scoredDocuments.length === 0 ? (
-              <div className="workspace-empty">
+              <div data-reveal-content="" className="workspace-empty">
                 <DashboardIcon name="document" className="size-6 text-muted" />
                 <p className="text-sm font-medium">Dale vida a tus documentos</p>
                 <p className="max-w-64 text-xs leading-6 text-muted">
@@ -464,7 +459,11 @@ export function DashboardCharts({
             ) : (
               <ul className="pb-2">
                 {scoredDocuments.map((document, index) => (
-                  <li key={document.document_id} className="workspace-ranking-row">
+                  <li
+                    data-reveal-content=""
+                    key={document.document_id}
+                    className="workspace-ranking-row"
+                  >
                     <span className="w-4 shrink-0 text-[10px] tabular-nums text-muted">
                       {String(index + 1).padStart(2, "0")}
                     </span>
@@ -517,11 +516,12 @@ export function DashboardCharts({
           </section>
 
           <section
+            data-reveal="container"
             className="workspace-panel workspace-activity-panel overflow-hidden"
             aria-labelledby={id + "-recent"}
           >
-            <DashboardReveal key={attempts.map((attempt) => attempt.id).join(":")}>
-              <div data-reveal="text" className="workspace-panel-heading">
+            <div>
+              <div data-reveal-content="" className="workspace-panel-heading">
                 <div>
                   <h3 id={id + "-recent"} className="workspace-panel-title">
                     Actividad reciente
@@ -534,7 +534,7 @@ export function DashboardCharts({
                 </Link>
               </div>
               {attempts.length === 0 ? (
-                <div data-reveal="" className="workspace-empty">
+                <div data-reveal-content="" className="workspace-empty">
                   <DashboardIcon name="clock" className="size-6 text-muted" />
                   <p className="text-sm font-medium">Tu primer intento te espera</p>
                   <p className="max-w-64 text-xs leading-6 text-muted">
@@ -547,7 +547,7 @@ export function DashboardCharts({
                     .reverse()
                     .slice(0, 4)
                     .map((point) => (
-                      <li key={point.id}>
+                      <li data-reveal-content="" key={point.id}>
                         <Link
                           href={
                             "/dashboard/quizzes/" +
@@ -557,13 +557,10 @@ export function DashboardCharts({
                           }
                           className="workspace-activity-link"
                         >
-                          <span
-                            data-reveal="fade"
-                            className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft/70 text-accent-foreground"
-                          >
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft/70 text-accent-foreground">
                             <DashboardIcon name="check" className="size-3.5" />
                           </span>
-                          <div data-reveal="text" className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1">
                             <p className="line-clamp-2 text-[13px] font-medium leading-5">
                               {point.title}
                             </p>
@@ -571,16 +568,15 @@ export function DashboardCharts({
                               {point.correct} de {point.total} correctas · {point.label}
                             </p>
                           </div>
-                          <span data-reveal="fade" className="text-xs font-semibold tabular-nums">
-                            <span className="sr-only">{score(point.score)}</span>
-                            <AnimatedMetric value={point.score} format={score} />
+                          <span className="text-xs font-semibold tabular-nums">
+                            {score(point.score)}
                           </span>
                         </Link>
                       </li>
                     ))}
                 </ul>
               )}
-            </DashboardReveal>
+            </div>
           </section>
         </div>
       </DashboardReveal>

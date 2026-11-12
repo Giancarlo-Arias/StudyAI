@@ -12,14 +12,40 @@ const DashboardCharts = dynamic(
   () => import("./dashboard-charts").then((module) => module.DashboardCharts),
   {
     loading: () => (
-      <div className="workspace-chart-placeholder" role="status" aria-label="Preparando gráficas">
-        <div className="workspace-loading-pulse" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
+      <div role="status" aria-label="Preparando gráficas">
+        <div
+          className="workspace-analytics animate-pulse motion-reduce:animate-none"
+          aria-hidden="true"
+        >
+          <div className="workspace-chart-grid">
+            <div className="workspace-panel workspace-chart-skeleton workspace-chart-skeleton--evolution">
+              <div className="h-4 w-40 max-w-full rounded-md bg-surface-soft" />
+              <div className="mt-3 h-3 w-48 max-w-full rounded-md bg-surface-soft" />
+              <div className="mt-8 h-7 w-24 rounded-lg bg-surface-soft" />
+              <div className="mt-8 h-40 rounded-xl bg-surface-soft/50" />
+            </div>
+            <div className="workspace-panel workspace-chart-skeleton workspace-chart-skeleton--progress">
+              <div className="h-4 w-32 max-w-full rounded-md bg-surface-soft" />
+              <div className="mx-auto mt-10 size-32 rounded-full border-[14px] border-surface-soft" />
+            </div>
+          </div>
+          <div className="workspace-chart-row">
+            {["documents", "activity"].map((item) => (
+              <div
+                key={item}
+                className={`workspace-panel workspace-chart-skeleton ${item === "activity" ? "workspace-activity-panel" : "workspace-ranking-panel"}`}
+              >
+                <div className="h-4 w-40 max-w-full rounded-md bg-surface-soft" />
+                <div className="mt-7 space-y-4">
+                  {[1, 2, 3].map((row) => (
+                    <div key={row} className="h-10 rounded-lg bg-surface-soft/60" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <span className="text-xs text-muted">Preparando tus gráficas</span>
+        <span className="sr-only">Preparando tus gráficas</span>
       </div>
     ),
   },
@@ -69,7 +95,10 @@ export function DashboardOverview({
   const latestAttempt = progress.recent_attempts.reduce<
     DashboardResponse["progress"]["recent_attempts"][number] | null
   >((latest, attempt) => {
-    if (!latest || new Date(attempt.submitted_at).getTime() > new Date(latest.submitted_at).getTime()) {
+    if (
+      !latest ||
+      new Date(attempt.submitted_at).getTime() > new Date(latest.submitted_at).getTime()
+    ) {
       return attempt;
     }
     return latest;
@@ -128,7 +157,7 @@ export function DashboardOverview({
 
   return (
     <main>
-      <DashboardReveal>
+      <DashboardReveal containerEntrance>
         <header
           data-reveal="text"
           className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"
@@ -155,16 +184,19 @@ export function DashboardOverview({
           {metrics.map((metric) => (
             <article
               key={metric.label}
-              data-reveal=""
+              data-reveal="container"
               className="workspace-panel workspace-glass workspace-metric"
             >
               <div className="workspace-metric-label">
-                <h2 title={metric.label}>{metric.label}</h2>
-                <span className="workspace-metric-icon">
+                <h2 data-reveal-content="" title={metric.label}>
+                  {metric.label}
+                </h2>
+                <span data-reveal-content="" className="workspace-metric-icon">
                   <DashboardIcon name={metric.icon} className="size-3.5" />
                 </span>
               </div>
               <p
+                data-reveal-content=""
                 className="workspace-metric-value"
                 title={metric.exactValue}
                 aria-label={metric.label + ": " + (metric.exactValue ?? metric.value)}
@@ -224,7 +256,10 @@ export function DashboardOverview({
           </div>
         </div>
 
-        <ViewTransition default="none" update="dashboard-display">
+        <ViewTransition
+          default="none"
+          update={{ "dashboard-display": "dashboard-display", default: "none" }}
+        >
           <div id="dashboard-study-content">
             {view === "charts" ? (
               <DashboardCharts progress={progress} documents={documents} />
@@ -368,7 +403,10 @@ export function DashboardOverview({
           </div>
         </ViewTransition>
 
-        <ViewTransition default="none" update="workspace-follow">
+        <ViewTransition
+          default="none"
+          update={{ "dashboard-display": "workspace-follow", default: "none" }}
+        >
           <AchievementsSection achievements={achievements} />
         </ViewTransition>
       </DashboardReveal>

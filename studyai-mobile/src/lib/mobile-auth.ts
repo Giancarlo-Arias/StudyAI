@@ -27,14 +27,8 @@ export async function signIn(
 ): Promise<void> {
   const response = await fetch(getApiUrl("auth/login"), {
     method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email: email.trim(),
-      password,
-    }),
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email.trim(), password }),
   });
 
   if (!response.ok) {
@@ -54,10 +48,7 @@ export async function signIn(
   const data: unknown = await response.json();
 
   if (
-    typeof data !== "object" ||
-    data === null ||
-    !("access_token" in data) ||
-    typeof data.access_token !== "string" ||
+    typeof data !== "object" || data === null || !("access_token" in data) || typeof data.access_token !== "string" ||
     !data.access_token
   ) {
     throw new Error("FastAPI no devolvió un token válido.");
@@ -97,10 +88,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const data: unknown = await response.json();
 
   if (
-    typeof data !== "object" ||
-    data === null ||
-    !("id" in data) ||
-    typeof data.id !== "number" ||
+    typeof data !== "object" || data === null || !("id" in data) || typeof data.id !== "number" ||
     !("full_name" in data) ||
     typeof data.full_name !== "string" ||
     !("email" in data) ||
@@ -109,11 +97,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     throw new Error("FastAPI devolvió un usuario no válido.");
   }
 
-  return {
-    id: data.id,
-    full_name: data.full_name,
-    email: data.email,
-  };
+  return { id: data.id, full_name: data.full_name, email: data.email };
 }
 
 // Cerrar sesión en el dispositivo.
