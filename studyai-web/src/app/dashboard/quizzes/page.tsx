@@ -155,6 +155,7 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
                     href={`/dashboard/quizzes/${encodeURIComponent(quiz.id)}/attempts`}
                     className="workspace-action"
                   >
+                    <DashboardIcon name="clock" className="size-4" />
                     Ver historial
                   </Link>
 
@@ -162,6 +163,7 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
                     href={`/dashboard/documents/${encodeURIComponent(quiz.document_id)}`}
                     className="workspace-action"
                   >
+                    <DashboardIcon name="document" className="size-4" />
                     Ver documento
                   </Link>
                 </div>

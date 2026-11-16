@@ -158,39 +158,3 @@ export function DocumentsListSkeleton() {
   );
 }
 
-export function DocumentsPageSkeleton() {
-  return (
-    <main
-      role="status"
-      aria-label="Preparando biblioteca"
-      className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12"
-    >
-      <span className="sr-only">Preparando biblioteca de documentos...</span>
-
-      <div aria-hidden="true">
-        <div className="h-4 w-32 animate-pulse rounded bg-surface-soft motion-reduce:animate-none" />
-        <div className="mt-4 h-9 w-56 animate-pulse rounded-lg bg-surface-soft motion-reduce:animate-none" />
-        <div className="mt-4 h-4 w-full max-w-md animate-pulse rounded bg-surface-soft motion-reduce:animate-none" />
-
-        <section className="mt-8 workspace-panel p-6">
-          <div className="h-5 w-40 animate-pulse rounded bg-surface-soft motion-reduce:animate-none" />
-          <div className="mt-3 h-4 w-64 max-w-full animate-pulse rounded bg-surface-soft motion-reduce:animate-none" />
-
-          <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-            <div className="h-12 flex-1 animate-pulse rounded-xl bg-surface-soft motion-reduce:animate-none" />
-            <div className="h-12 w-full animate-pulse rounded-xl bg-surface-soft motion-reduce:animate-none sm:w-40" />
-          </div>
-        </section>
-
-        <section className="mt-8 overflow-hidden workspace-panel">
-          <div className="border-b border-input-border p-5">
-            <div className="h-5 w-36 animate-pulse rounded bg-surface-soft motion-reduce:animate-none" />
-            <div className="mt-3 h-4 w-52 animate-pulse rounded bg-surface-soft motion-reduce:animate-none" />
-          </div>
-
-          <DocumentsListSkeleton />
-        </section>
-      </div>
-    </main>
-  );
-}

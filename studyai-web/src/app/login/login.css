@@ -141,11 +141,11 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(8px) scale(0.99);
+  transform: translateY(5px) scale(0.99);
   transition:
-    opacity 220ms var(--ease-out),
-    transform 360ms var(--ease-out),
-    visibility 360ms;
+    opacity 400ms var(--ease-out),
+    transform 500ms var(--ease-out),
+    visibility 500ms;
 }
 .login-feature-slide[data-active="true"] {
   z-index: 1;
@@ -204,9 +204,15 @@
   color: var(--accent-foreground);
 }
 .login-feature-play {
-  width: 44px;
+  order: 1;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
   flex-shrink: 0;
   border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--foreground);
 }
 .login-feature-control:focus-visible,
 .login-feature-play:focus-visible {

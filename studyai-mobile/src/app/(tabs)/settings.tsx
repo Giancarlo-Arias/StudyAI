@@ -1,18 +1,27 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { typography } from "@/styles/typography";
+import { useThemeTransition } from "@/components/theme-transition";
+import { LinearGradient } from "@/components/theme-gradient";
 import { useRouter } from "expo-router";
 import { ChevronRight, LogOut, Moon, Sun } from "lucide-react-native";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Appearance, Pressable, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionIcon, MotionPanel, MotionText, MotionView, TabScene } from "@/components/dashboard/dashboard-motion";
 import { signOut } from "@/lib/mobile-auth";
 import { getDashboardPalette } from "@/styles/dashboard-overview.styles";
 
-const THEME_KEY = "studyai_theme";
-
 export default function SettingsScreen() {
+  const changeTheme = useThemeTransition();
+  async function toggleTheme() {
+    try {
+      await changeTheme();
+      setError("");
+    } catch {
+      setError("El tema cambió, pero no se pudo guardar tu preferencia.");
+    }
+  }
   const router = useRouter();
   const isDark = useColorScheme() === "dark";
   const c = getDashboardPalette(isDark);
@@ -22,21 +31,6 @@ export default function SettingsScreen() {
 
   const [error, setError] = useState("");
 
-  async function toggleTheme() {
-    const next = isDark ? "light" : "dark";
-
-    Appearance.setColorScheme(next);
-
-    try {
-      await AsyncStorage.setItem(
-        THEME_KEY,
-        next,
-      );
-      setError("");
-    } catch {
-      setError("No se pudo guardar el tema.");
-    }
-  }
 
   async function logout() {
     if (loggingOut) return;
@@ -182,17 +176,17 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 40, gap: 23 },
   header: { gap: 5 },
-  title: { fontSize: 29, fontWeight: "800", letterSpacing: -0.9 },
-  subtitle: { fontSize: 13, lineHeight: 19 },
+  title: { ...typography, fontSize: 29, fontWeight: "800", letterSpacing: -0.9 },
+  subtitle: { ...typography, fontSize: 14, lineHeight: 22 },
   section: { gap: 10 },
-  sectionLabel: { fontSize: 11, fontWeight: "800", letterSpacing: 0.65, paddingLeft: 3 },
+  sectionLabel: { ...typography, fontSize: 11, fontWeight: "800", letterSpacing: 0.65, paddingLeft: 3 },
   card: { borderRadius: 19, borderWidth: 1, overflow: "hidden" },
   row: { minHeight: 78, flexDirection: "row", alignItems: "center", paddingHorizontal: 15, gap: 12 },
   iconSlot: { width: 42, height: 56, alignItems: "center", justifyContent: "center" },
   iconBox: { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   rowCopy: { flex: 1, minWidth: 0, justifyContent: "center", gap: 5 },
-  rowTitle: { fontSize: 14, lineHeight: 19, fontWeight: "700" },
-  rowDetail: { fontSize: 12, lineHeight: 16 },
+  rowTitle: { ...typography, fontSize: 14, lineHeight: 19, fontWeight: "700" },
+  rowDetail: { ...typography, fontSize: 12, lineHeight: 16 },
   switchSlot: { width: 62, height: 56, alignItems: "center", justifyContent: "center", alignSelf: "center" },
   chevronSlot: { width: 24, height: 56, alignItems: "center", justifyContent: "center" },
   errorBox: { paddingHorizontal: 8, paddingVertical: 4 },

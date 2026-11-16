@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 
 async function DashboardGuard({ children }: { children: ReactNode }) {
   await requireUser();
-  return children;
+  return <DashboardMotionScope>{children}</DashboardMotionScope>;
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -80,9 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </main>
               }
             >
-              <DashboardMotionScope>
-                <DashboardGuard>{children}</DashboardGuard>
-              </DashboardMotionScope>
+              <DashboardGuard>{children}</DashboardGuard>
             </Suspense>
           </div>
         </div>

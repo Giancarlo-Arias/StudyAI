@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { addTransitionType, startTransition, useState, ViewTransition } from "react";
+import {
+  addTransitionType,
+  Fragment,
+  startTransition,
+  useState,
+  useSyncExternalStore,
+  ViewTransition,
+  type ReactNode,
+} from "react";
 import type { DashboardResponse } from "@/types/dashboard";
 import { AchievementsSection } from "./achievements-section";
 import { AnimatedMetric, DashboardReveal } from "./dashboard-reveal";
@@ -58,6 +66,37 @@ const compactCountFormatter = new Intl.NumberFormat("es-CR", {
   maximumFractionDigits: 1,
 });
 
+const defaultOrder = "metrics,study,achievements";
+const sectionLabels = {
+  metrics: "Indicadores",
+  study: "Tu aprendizaje",
+  achievements: "Mis logros",
+} as const;
+type DashboardSection = keyof typeof sectionLabels;
+
+function subscribeOrder(callback: () => void) {
+  window.addEventListener("studyai-dashboard-order", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("studyai-dashboard-order", callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getOrder() {
+  try {
+    const value = localStorage.getItem("studyai-dashboard-order");
+    const items = value?.split(",") ?? [];
+    return items.length === 3 &&
+      new Set(items).size === 3 &&
+      items.every((item) => Object.prototype.hasOwnProperty.call(sectionLabels, item))
+      ? items.join(",")
+      : defaultOrder;
+  } catch {
+    return defaultOrder;
+  }
+}
+
 function formatScore(value: number | null) {
   return value === null ? "—" : `${scoreFormatter.format(value)} %`;
 }
@@ -91,7 +130,43 @@ export function DashboardOverview({
   fullName: string;
 }) {
   const [view, setView] = useState<"summary" | "charts">("charts");
+  const order = useSyncExternalStore(subscribeOrder, getOrder, () => defaultOrder).split(
+    ",",
+  ) as DashboardSection[];
+  function moveSection(section: DashboardSection, direction: -1 | 1) {
+    const next = [...order];
+    const index = next.indexOf(section);
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    try {
+      localStorage.setItem("studyai-dashboard-order", next.join(","));
+      window.dispatchEvent(new Event("studyai-dashboard-order"));
+    } catch {
+      return;
+    }
+  }
   const { progress, documents, achievements } = dashboard;
+  const milestones = [
+    {
+      code: "web_25_attempts",
+      title: "Hábito de estudio",
+      description: "Completa 25 intentos de cuestionarios.",
+      current: Math.min(progress.total_attempts, 25),
+      target: 25,
+      unlocked: progress.total_attempts >= 25,
+      unlocked_at: null,
+    },
+    {
+      code: "web_10_quizzes",
+      title: "Aprendiz en marcha",
+      description: "Completa 10 cuestionarios diferentes.",
+      current: Math.min(progress.quizzes_completed, 10),
+      target: 10,
+      unlocked: progress.quizzes_completed >= 10,
+      unlocked_at: null,
+    },
+  ];
   const latestAttempt = progress.recent_attempts.reduce<
     DashboardResponse["progress"]["recent_attempts"][number] | null
   >((latest, attempt) => {
@@ -155,58 +230,37 @@ export function DashboardOverview({
     },
   ];
 
-  return (
-    <main>
-      <DashboardReveal containerEntrance>
-        <header
-          data-reveal="text"
-          className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"
-        >
-          <div className="min-w-0">
-            <h1 className="break-words font-display text-2xl font-semibold leading-tight tracking-[-.035em] sm:text-[1.75rem]">
-              Hola, {firstName}.
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-              Todo lo que estás aprendiendo, en un solo lugar.
-            </p>
-          </div>
-          <Link
-            href={progress.total_quizzes > 0 ? "/dashboard/quizzes" : "/dashboard/documents"}
-            className="workspace-action workspace-action-primary workspace-study-action w-fit shrink-0"
+  const sections: Record<DashboardSection, ReactNode> = {
+    metrics: (
+      <section aria-label="Tu aprendizaje en cifras" className="workspace-metrics">
+        {metrics.map((metric) => (
+          <article
+            key={metric.label}
+            data-reveal="container"
+            className="workspace-panel workspace-glass workspace-metric"
           >
-            <DashboardIcon name="document" className="size-[18px]" />
-            Continuar estudiando
-            <DashboardIcon name="arrow" className="size-4" />
-          </Link>
-        </header>
-
-        <section aria-label="Tu aprendizaje en cifras" className="workspace-metrics">
-          {metrics.map((metric) => (
-            <article
-              key={metric.label}
-              data-reveal="container"
-              className="workspace-panel workspace-glass workspace-metric"
+            <div className="workspace-metric-label">
+              <h2 data-reveal-content="" title={metric.label}>
+                {metric.label}
+              </h2>
+              <span data-reveal-content="" className="workspace-metric-icon">
+                <DashboardIcon name={metric.icon} className="size-3.5" />
+              </span>
+            </div>
+            <p
+              data-reveal-content=""
+              className="workspace-metric-value"
+              title={metric.exactValue}
+              aria-label={metric.label + ": " + (metric.exactValue ?? metric.value)}
             >
-              <div className="workspace-metric-label">
-                <h2 data-reveal-content="" title={metric.label}>
-                  {metric.label}
-                </h2>
-                <span data-reveal-content="" className="workspace-metric-icon">
-                  <DashboardIcon name={metric.icon} className="size-3.5" />
-                </span>
-              </div>
-              <p
-                data-reveal-content=""
-                className="workspace-metric-value"
-                title={metric.exactValue}
-                aria-label={metric.label + ": " + (metric.exactValue ?? metric.value)}
-              >
-                <AnimatedMetric value={metric.rawValue} format={metric.format} />
-              </p>
-            </article>
-          ))}
-        </section>
-
+              <AnimatedMetric value={metric.rawValue} format={metric.format} />
+            </p>
+          </article>
+        ))}
+      </section>
+    ),
+    study: (
+      <>
         <div data-reveal="text" className="workspace-data-toolbar">
           <div>
             <h2 className="text-base font-semibold tracking-tight">Tu aprendizaje</h2>
@@ -264,7 +318,10 @@ export function DashboardOverview({
             {view === "charts" ? (
               <DashboardCharts progress={progress} documents={documents} />
             ) : (
-              <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <DashboardReveal
+                containerEntrance
+                className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
+              >
                 <section
                   data-reveal=""
                   className="workspace-panel overflow-hidden"
@@ -398,17 +455,84 @@ export function DashboardOverview({
                     </ul>
                   )}
                 </section>
-              </div>
+              </DashboardReveal>
             )}
           </div>
         </ViewTransition>
+      </>
+    ),
+    achievements: (
+      <ViewTransition
+        default="none"
+        update={{ "dashboard-display": "workspace-follow", default: "none" }}
+      >
+        <div>
+          <AchievementsSection key={view} achievements={[...achievements, ...milestones]} />
+        </div>
+      </ViewTransition>
+    ),
+  };
 
-        <ViewTransition
-          default="none"
-          update={{ "dashboard-display": "workspace-follow", default: "none" }}
+  return (
+    <main>
+      <DashboardReveal containerEntrance className="workspace-overview-layout">
+        <header
+          data-reveal="text"
+          className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"
         >
-          <AchievementsSection achievements={achievements} />
-        </ViewTransition>
+          <div className="min-w-0">
+            <h1 className="break-words font-display text-2xl font-semibold leading-tight tracking-[-.035em] sm:text-[1.75rem]">
+              Hola, {firstName}.
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
+              Todo lo que estás aprendiendo, en un solo lugar.
+            </p>
+          </div>
+          <Link
+            href={progress.total_quizzes > 0 ? "/dashboard/quizzes" : "/dashboard/documents"}
+            className="workspace-action workspace-action-primary workspace-study-action w-fit shrink-0"
+          >
+            <DashboardIcon name="document" className="size-[18px]" />
+            Continuar estudiando
+            <DashboardIcon name="arrow" className="size-4" />
+          </Link>
+        </header>
+
+        <details className="workspace-order-settings">
+          <summary>Organizar dashboard</summary>
+          <p className="mt-2 text-xs text-muted">
+            Elige el orden de las secciones en este navegador.
+          </p>
+          <ol className="mt-3 space-y-1">
+            {order.map((section, index) => (
+              <li key={section} className="workspace-order-row">
+                <span>{sectionLabels[section]}</span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    aria-disabled={index === 0}
+                    onClick={() => moveSection(section, -1)}
+                    aria-label={`Subir ${sectionLabels[section]}`}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    aria-disabled={index === order.length - 1}
+                    onClick={() => moveSection(section, 1)}
+                    aria-label={`Bajar ${sectionLabels[section]}`}
+                  >
+                    ↓
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </details>
+
+        {order.map((section) => (
+          <Fragment key={section}>{sections[section]}</Fragment>
+        ))}
       </DashboardReveal>
     </main>
   );

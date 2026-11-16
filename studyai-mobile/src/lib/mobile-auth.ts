@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { expireSession, restoreSession, waitForSessionCleanup } from "@/lib/session-events";
 
 const TOKEN_KEY = "studyai_access_token";
 
@@ -54,10 +55,12 @@ export async function signIn(
     throw new Error("FastAPI no devolvió un token válido.");
   }
 
+  await waitForSessionCleanup();
   await SecureStore.setItemAsync(
     TOKEN_KEY,
     data.access_token,
   );
+  restoreSession();
 }
 
 // Consultar el usuario de la sesión actual.
@@ -77,7 +80,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   });
 
   if (response.status === 401) {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    expireSession();
     return null;
   }
 

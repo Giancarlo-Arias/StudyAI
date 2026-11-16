@@ -1,9 +1,12 @@
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { typography } from "@/styles/typography";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getCurrentUser, signOut } from "@/lib/mobile-auth";
+import { getSessionExpired } from "@/lib/session-events";
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -16,6 +19,10 @@ export default function IndexScreen() {
     let active = true;
 
     async function checkSession() {
+      if (getSessionExpired()) {
+        router.replace("/login");
+        return;
+      }
       setError(false);
 
       try {
@@ -106,11 +113,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F8FC" },
   content: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 30, gap: 18 },
   logo: { width: 58, height: 58, borderRadius: 19, backgroundColor: "#252342", alignItems: "center", justifyContent: "center" },
-  logoText: { color: "#FFFFFF", fontSize: 30, fontWeight: "800" },
-  brand: { fontSize: 27, fontWeight: "800", letterSpacing: -1.5, color: "#202038" },
+  logoText: { ...typography, color: "#FFFFFF", fontSize: 30, fontWeight: "800" },
+  brand: { ...typography, fontSize: 27, fontWeight: "800", letterSpacing: -1.5, color: "#202038" },
   loader: { marginTop: 20 },
-  message: { color: "#85869B", fontSize: 13, lineHeight: 21, textAlign: "center" },
+  message: { ...typography, color: "#85869B", fontSize: 13, lineHeight: 21, textAlign: "center" },
   button: { backgroundColor: "#252342", borderRadius: 14, paddingHorizontal: 26, paddingVertical: 15, marginTop: 12 },
   buttonText: { color: "#FFFFFF", fontWeight: "700" },
-  secondaryButton: { color: "#7464D9", fontSize: 13, fontWeight: "700", marginTop: 8 },
+  secondaryButton: { ...typography, color: "#7464D9", fontSize: 13, fontWeight: "700", marginTop: 8 },
 });

@@ -609,9 +609,62 @@
   gap: 12px;
   margin-top: 22px;
 }
+.workspace-overview-layout {
+  display: flex;
+  flex-direction: column;
+}
+.workspace-order-settings {
+  margin-top: 16px;
+  align-self: flex-end;
+  color: var(--muted);
+  font-size: 13px;
+}
+.workspace-order-settings summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.workspace-order-settings summary::before {
+  content: "↕";
+  color: var(--accent-foreground);
+}
+.workspace-order-settings summary:focus-visible,
+.workspace-order-row button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.workspace-order-row {
+  display: flex;
+  min-width: 240px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.workspace-order-row button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--foreground);
+  cursor: pointer;
+}
+.workspace-order-row button[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.workspace-order-row button:not([aria-disabled="true"]):hover {
+  background: var(--accent-soft);
+  color: var(--accent-foreground);
+}
 .workspace-metric {
   display: flex;
-  min-height: 100px;
+  min-height: 96px;
   flex-direction: column;
   justify-content: center;
   padding: 16px 18px;
@@ -629,7 +682,7 @@
   justify-content: space-between;
   gap: 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .workspace-metric-value {

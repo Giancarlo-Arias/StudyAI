@@ -1,5 +1,7 @@
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { typography } from "@/styles/typography";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop, Text as SvgText } from "react-native-svg";
 
@@ -191,6 +193,7 @@ export function ScoreChart({ attempts, isDark }: Props) {
             key={`score-${active.attempt_id}`}
             value={point.score}
             suffix="%"
+            decimalPlaces={1}
             label="Calificación seleccionada"
             delay={130}
             duration={800}
@@ -327,15 +330,15 @@ export function ScoreChart({ attempts, isDark }: Props) {
 const styles = StyleSheet.create({
   root: { gap: 5 },
   selection: { flexDirection: "row", alignItems: "center", gap: 13, minHeight: 50 },
-  selectionNumber: { fontSize: 31, lineHeight: 38, fontWeight: "800", letterSpacing: -1.1, fontVariant: ["tabular-nums"] },
+  selectionNumber: { ...typography, fontSize: 31, lineHeight: 38, fontWeight: "800", letterSpacing: -1.1, fontVariant: ["tabular-nums"] },
   selectionCopy: { flex: 1, minWidth: 0, gap: 3 },
-  selectionTitle: { fontSize: 12, fontWeight: "700" },
-  selectionInfo: { fontSize: 11, lineHeight: 16 },
+  selectionTitle: { ...typography, fontSize: 12, fontWeight: "700" },
+  selectionInfo: { ...typography, fontSize: 11, lineHeight: 16 },
   chartWrapper: { position: "relative" },
   touchGrid: { position: "absolute", top: 0, bottom: 12, left: 0, right: 0 },
   touchColumn: { position: "absolute", top: 0, bottom: 0, minWidth: 44 },
-  hint: { textAlign: "center", fontSize: 10.5, lineHeight: 16 },
+  hint: { ...typography, textAlign: "center", fontSize: 10.5, lineHeight: 16 },
   empty: { minHeight: 155, justifyContent: "center", alignItems: "center", paddingHorizontal: 20, gap: 7 },
-  emptyTitle: { fontSize: 14, fontWeight: "700" },
-  emptyDescription: { fontSize: 12, lineHeight: 18, textAlign: "center" },
+  emptyTitle: { ...typography, fontSize: 14, fontWeight: "700" },
+  emptyDescription: { ...typography, fontSize: 12, lineHeight: 18, textAlign: "center" },
 });

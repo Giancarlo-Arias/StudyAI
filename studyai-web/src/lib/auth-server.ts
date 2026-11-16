@@ -1,8 +1,8 @@
 import "server-only";
 
-import { navigation } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { CurrentUser } from "@/types/auth";
 
@@ -28,7 +28,7 @@ export async function getSessionUser(): Promise<CurrentUser | null> {
 }
 
 export async function requireUser(): Promise<CurrentUser> {
-  await navigation();
+  await connection();
   const user = await getSessionUser();
 
   if (!user) {

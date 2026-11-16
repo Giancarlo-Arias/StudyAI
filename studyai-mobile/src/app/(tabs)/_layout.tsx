@@ -1,17 +1,23 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
 import { DynamicColorIOS, Platform, useColorScheme } from "react-native";
+import { getDashboardPalette } from "@/styles/dashboard-overview.styles";
+import { typography } from "@/styles/typography";
 
 export default function TabsLayout() {
   const isDark = useColorScheme() === "dark";
+  const colors = getDashboardPalette(isDark);
+  const base = isDark ? DarkTheme : DefaultTheme;
 
   const tint =
     Platform.OS === "ios" ? DynamicColorIOS({ light: "#6658D9", dark: "#B7AAFF" }) : isDark ? "#B7AAFF" : "#6658D9";
 
   return (
-    <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={{ ...base, colors: { ...base.colors, background: colors.background, card: colors.surface, text: colors.text, primary: colors.accent, border: colors.outline } }}>
       <NativeTabs
         tintColor={tint}
+        backgroundColor={colors.surface}
+        labelStyle={{ ...typography, fontSize: 12 }}
         minimizeBehavior="onScrollDown"
         labelVisibilityMode="labeled"
         indicatorColor={isDark ? "#34334D" : "#E9E6F8"}

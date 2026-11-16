@@ -1,51 +1,35 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useThemeTransition } from "@/components/theme-transition";
 import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "@/components/theme-gradient";
 import { useRouter } from "expo-router";
 import { ArrowRight, ChevronDown, Eye, EyeOff, LockKeyhole, Mail, Moon, Sparkles, Sun } from "lucide-react-native";
 import { useEffect, useRef, useState, type ComponentRef } from "react";
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Animated,
-  Appearance,
-  Easing,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableWithoutFeedback,
-  useColorScheme,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, StyleSheet, Text, View, TextInput, TouchableWithoutFeedback, useColorScheme, useWindowDimensions, type KeyboardEvent } from "react-native";
+import Motion, { Easing as MotionEasing, cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSpring, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { StudyHeroArt } from "@/components/illustrations/study-hero";
 import { signIn } from "@/lib/mobile-auth";
-
-const THEME_KEY = "studyai_theme";
+import { prepareDashboardEntry, waitForDashboardEntry } from "@/lib/dashboard-entry";
+import { getSessionExpired } from "@/lib/session-events";
 
 type FocusedField = "email" | "password" | null;
 
 const light = {
   text: "#25233A",
-  muted: "#79788F",
-  accent: "#7561DA",
+  muted: "#626178",
+  accent: "#6550C8",
   border: "#FFFFFF",
   input: "rgba(255,255,255,0.55)",
   inputBorder: "rgba(115,103,167,0.18)",
-  placeholder: "#9694AA",
+  placeholder: "#6D6A82",
   glassTint: "rgba(255,255,255,0.04)",
   fallbackGlassTint: "rgba(255,255,255,0.52)",
   halo: "rgba(151,116,255,0.28)",
   iconBackground: "#30284C",
   shadow: "#5E527A",
-  footer: "#9290A3",
+  footer: "#68657D",
 };
 
 const dark = {
@@ -71,6 +55,11 @@ function supportsNativeGlass(): boolean {
 }
 
 export default function LoginScreen() {
+  const reduced = useReducedMotion();
+  const changeTheme = useThemeTransition();
+  async function toggleTheme() {
+    try { await changeTheme(); } catch { /* La preferencia visual ya se aplico. */ }
+  }
   const router = useRouter();
   const systemScheme = useColorScheme();
   const { height } = useWindowDimensions();
@@ -79,10 +68,16 @@ export default function LoginScreen() {
   const colors = isDark ? dark : light;
   const compact = height < 760;
   const nativeGlass = supportsNativeGlass();
+  const backgroundColors: [string, string, string] = isDark ? ["#101224", "#1A1A35", "#262041"] : ["#F8F9FC", "#F0EDFB", "#E6E0FB"];
+  const controlScale = useSharedValue(1);
+  const controlMotion = useAnimatedStyle(() => ({ transform: [{ scale: controlScale.get() }] }));
+  const floating = useSharedValue(0);
+  const floatingMotion = useAnimatedStyle(() => ({ transform: [{ translateY: floating.get() * -12 }] }));
 
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
-  const floating = useRef(new Animated.Value(0)).current;
-  const entrance = useRef(new Animated.Value(0)).current;
+  const mounted = useRef(true);
+  const finishKeyboardWait = useRef<(() => void) | null>(null);
+  const [entrance] = useState(() => new Animated.Value(0));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -92,29 +87,19 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const backgroundColors: [string, string, string] = isDark ? ["#101224", "#1A1A35", "#262041"] : ["#F8F9FC", "#F0EDFB", "#E6E0FB"];
-
   useEffect(() => {
-    let active = true;
-
-    async function restoreTheme() {
-      try {
-        const saved = await AsyncStorage.getItem(THEME_KEY);
-
-        if (
-          active && (saved === "light" || saved === "dark")
-        ) {
-          Appearance.setColorScheme(saved);
-        }
-      } catch { }
-    }
-
-    void restoreTheme();
-
+    mounted.current = true;
     return () => {
-      active = false;
+      mounted.current = false;
+      finishKeyboardWait.current?.();
     };
   }, []);
+
+  useEffect(() => {
+    if (reduced || keyboardOpen) return;
+    floating.set(withRepeat(withTiming(1, { duration: 2800, easing: MotionEasing.inOut(MotionEasing.sin) }), -1, true));
+    return () => cancelAnimation(floating);
+  }, [floating, keyboardOpen, reduced]);
 
   useEffect(() => {
     const showEvent =
@@ -123,49 +108,27 @@ export default function LoginScreen() {
     const hideEvent =
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
-    const showSubscription = Keyboard.addListener(
-      showEvent,
-      () => setKeyboardOpen(true),
-    );
+    function syncKeyboard(event: KeyboardEvent, open: boolean) {
+      if (!reduced) {
+        const duration = event.duration > 0 ? event.duration : 280;
+        LayoutAnimation.configureNext({
+          duration,
+          update: { type: Platform.OS === "ios" ? event.easing : "easeInEaseOut" },
+          create: { type: "easeInEaseOut", property: "opacity", duration: Math.min(duration, 180) },
+          delete: { type: "easeInEaseOut", property: "opacity", duration: Math.min(duration, 140) },
+        });
+      }
+      setKeyboardOpen(open);
+    }
 
-    const hideSubscription = Keyboard.addListener(
-      hideEvent,
-      () => setKeyboardOpen(false),
-    );
+    const showSubscription = Keyboard.addListener(showEvent, (event) => syncKeyboard(event, true));
+    const hideSubscription = Keyboard.addListener(hideEvent, (event) => syncKeyboard(event, false));
 
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    let animation: Animated.CompositeAnimation | null = null;
-
-    async function startAnimation() {
-      const reduceMotion =
-        await AccessibilityInfo.isReduceMotionEnabled();
-
-      if (!active || reduceMotion) return;
-
-      animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(floating, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          Animated.timing(floating, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        ]),
-      );
-
-      animation.start();
-    }
-
-    void startAnimation().catch(() => { });
-
-    return () => {
-      active = false;
-      animation?.stop();
-    };
-  }, [floating]);
+  }, [reduced]);
 
   useEffect(() => {
     let active = true;
@@ -195,7 +158,6 @@ export default function LoginScreen() {
     };
   }, [entrance]);
 
-  const floatingY = floating.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
 
   const cardY = entrance.interpolate({ inputRange: [0, 1], outputRange: [26, 0] });
 
@@ -204,14 +166,24 @@ export default function LoginScreen() {
     setFocused(null);
   }
 
-  async function toggleTheme() {
-    const next = isDark ? "light" : "dark";
+  async function closeKeyboardForNavigation() {
+    if (!Keyboard.isVisible()) {
+      dismissKeyboard();
+      return;
+    }
 
-    Appearance.setColorScheme(next);
-
-    try {
-      await AsyncStorage.setItem(THEME_KEY, next);
-    } catch { }
+    await new Promise<void>((resolve) => {
+      const subscription = Keyboard.addListener("keyboardDidHide", finish);
+      const timeout = setTimeout(finish, 500);
+      function finish() {
+        subscription.remove();
+        clearTimeout(timeout);
+        finishKeyboardWait.current = null;
+        resolve();
+      }
+      finishKeyboardWait.current = finish;
+      dismissKeyboard();
+    });
   }
 
   async function handleLogin() {
@@ -231,22 +203,31 @@ export default function LoginScreen() {
 
     setError("");
     setLoading(true);
+    let navigating = false;
 
     try {
       await signIn(normalizedEmail, password);
-      dismissKeyboard();
+      if (!mounted.current) return;
+
+      const entry = prepareDashboardEntry();
+      await Promise.all([waitForDashboardEntry(entry), closeKeyboardForNavigation()]);
+      if (!mounted.current) return;
+      if (getSessionExpired()) throw new Error("No se pudo validar tu sesión. Inicia sesión nuevamente.");
+
       router.replace("/dashboard");
+      navigating = true;
     } catch (caught) {
+      if (!mounted.current) return;
       setError(
         caught instanceof Error ? caught.message : "No fue posible iniciar sesión.",
       );
     } finally {
-      setLoading(false);
+      if (mounted.current && !navigating) setLoading(false);
     }
   }
 
   return (
-    <LinearGradient colors={backgroundColors} style={styles.screen}>
+    <LinearGradient colors={backgroundColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.screen}>
       <View
         pointerEvents="none"
         style={[styles.ambientOne, { backgroundColor: isDark ? "rgba(132,98,255,0.18)" : "rgba(166,145,255,0.22)" }]}
@@ -275,40 +256,23 @@ export default function LoginScreen() {
                   </Text>
                 </View>
 
-                {keyboardOpen ? (
+                <Motion.View style={controlMotion}>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Cerrar teclado"
-                    accessibilityHint="Oculta el teclado y vuelve a la pantalla completa"
-                    onPress={dismissKeyboard}
-                    style={({ pressed }) => [
-                      styles.themeButton,
-                      {
-                        backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.62)",
-                        borderColor: colors.border,
-                        opacity: pressed ? 0.65 : 1,
-                      },
-                    ]}
+                    accessibilityLabel={keyboardOpen ? "Cerrar teclado" : isDark ? "Activar modo claro" : "Activar modo oscuro"}
+                    accessibilityHint={keyboardOpen ? "Oculta el teclado y vuelve a la pantalla completa" : undefined}
+                    onPress={keyboardOpen ? dismissKeyboard : () => void toggleTheme()}
+                    onPressIn={() => { if (!reduced) controlScale.set(withSpring(0.94, { duration: 180, dampingRatio: 1 })); }}
+                    onPressOut={() => { if (!reduced) controlScale.set(withSpring(1, { duration: 220, dampingRatio: 1 })); }}
+                    style={({ pressed }) => [styles.themeButton, {
+                      backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.62)",
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.75 : 1,
+                    }]}
                   >
-                    <ChevronDown size={22} color={colors.accent} strokeWidth={2} />
+                    {keyboardOpen ? <ChevronDown size={22} color={colors.accent} strokeWidth={2} /> : isDark ? <Sun size={19} color={colors.accent} /> : <Moon size={19} color={colors.accent} />}
                   </Pressable>
-                ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={isDark ? "Activar modo claro" : "Activar modo oscuro"}
-                    onPress={() => void toggleTheme()}
-                    style={({ pressed }) => [
-                      styles.themeButton,
-                      {
-                        backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.62)",
-                        borderColor: colors.border,
-                        opacity: pressed ? 0.65 : 1,
-                      },
-                    ]}
-                  >
-                    {isDark ? (<Sun size={19} color="#DDC9FF" />) : (<Moon size={19} color="#6F5AD6" />)}
-                  </Pressable>
-                )}
+                </Motion.View>
               </View>
 
               {!keyboardOpen && (
@@ -338,16 +302,16 @@ export default function LoginScreen() {
               <View style={styles.stage}>
                 {!keyboardOpen && (
                   <>
-                    <Animated.View
+                    <Motion.View
                       pointerEvents="none"
-                      style={[styles.artwork, compact && styles.compactArtwork, { transform: [{ translateY: floatingY }] }]}
+                      style={[styles.artwork, compact && styles.compactArtwork, floatingMotion]}
                     >
                       <StudyHeroArt />
-                    </Animated.View>
+                    </Motion.View>
 
-                    <Animated.View
+                    <Motion.View
                       pointerEvents="none"
-                      style={[styles.stageOrb, { backgroundColor: colors.halo, transform: [{ translateY: floatingY }] }]}
+                      style={[styles.stageOrb, { backgroundColor: colors.halo }, floatingMotion]}
                     />
 
                     <View pointerEvents="none" style={[styles.stageRing, { borderColor: colors.halo }]} />
@@ -405,9 +369,10 @@ export default function LoginScreen() {
                           Correo electrónico
                         </Text>
 
-                        <View
+                        <Motion.View
                           style={[
                             styles.inputWrapper,
+                            { transitionProperty: ["borderColor", "backgroundColor"], transitionDuration: reduced ? 0 : 160 },
                             keyboardOpen && styles.keyboardInputWrapper,
                             { backgroundColor: colors.input, borderColor: focused === "email" ? colors.accent : colors.inputBorder },
                           ]}
@@ -438,7 +403,7 @@ export default function LoginScreen() {
                               passwordRef.current?.focus()
                             }
                           />
-                        </View>
+                        </Motion.View>
                       </View>
 
                       <View style={styles.field}>
@@ -446,9 +411,10 @@ export default function LoginScreen() {
                           Contraseña
                         </Text>
 
-                        <View
+                        <Motion.View
                           style={[
                             styles.inputWrapper,
+                            { transitionProperty: ["borderColor", "backgroundColor"], transitionDuration: reduced ? 0 : 160 },
                             keyboardOpen && styles.keyboardInputWrapper,
                             { backgroundColor: colors.input, borderColor: focused === "password" ? colors.accent : colors.inputBorder },
                           ]}
@@ -491,7 +457,7 @@ export default function LoginScreen() {
                           >
                             {showPassword ? (<EyeOff size={19} color={colors.muted} />) : (<Eye size={19} color={colors.muted} />)}
                           </Pressable>
-                        </View>
+                        </Motion.View>
                       </View>
 
                       {error ? (

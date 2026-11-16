@@ -1,5 +1,6 @@
+import { View } from "@/components/theme-primitives";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+
 import { useReducedMotion } from "react-native-reanimated";
 
 import { ScoreChart } from "@/components/dashboard/score-chart";
@@ -13,22 +14,29 @@ type Props = {
 
 export function StagedScoreChart({ attempts, isDark, delayMs = 1200 }: Props) {
   const reduced = useReducedMotion();
-  const [ready, setReady] = useState(reduced);
+
+  return (
+    <DelayedScoreChart
+      key={`${delayMs}-${reduced}`}
+      attempts={attempts}
+      isDark={isDark}
+      delayMs={reduced ? 0 : delayMs}
+    />
+  );
+}
+
+function DelayedScoreChart({ attempts, isDark, delayMs }: Required<Props>) {
+  const [ready, setReady] = useState(delayMs === 0);
 
   useEffect(() => {
-    if (reduced) {
-      setReady(true);
-      return;
-    }
-
-    setReady(false);
+    if (delayMs === 0) return;
 
     const id = setTimeout(() => {
       setReady(true);
     }, delayMs);
 
     return () => clearTimeout(id);
-  }, [delayMs, reduced]);
+  }, [delayMs]);
 
   return (
     <View style={{ minHeight: 235 }}>

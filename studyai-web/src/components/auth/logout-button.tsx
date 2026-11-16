@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { logout } from "@/lib/auth";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,8 +21,7 @@ export function LogoutButton() {
         return;
       }
 
-      router.replace("/login");
-      router.refresh();
+      window.location.replace("/login");
     } catch {
       setError("No se pudo conectar con el servidor.");
     } finally {

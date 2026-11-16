@@ -1,9 +1,11 @@
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { typography } from "@/styles/typography";
 import * as DocumentPicker from "expo-document-picker";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "@/components/theme-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ArrowUpRight, ChevronDown, ChevronRight, FileText, FileUp, Plus } from "lucide-react-native";
+import { ArrowUpRight, BookOpenCheck, ChartNoAxesCombined, ChevronDown, ChevronRight, FileText, FileUp, Plus } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, Animated, RefreshControl, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionIcon, MotionPanel, MotionText, MotionView, SkeletonBlock, TabScene } from "@/components/dashboard/dashboard-motion";
@@ -58,7 +60,7 @@ function UploadCard({ colors, isDark, busy, onPress }: {
 
       <MotionView delay={930} style={styles.uploadMetaRow}>
         <View style={[styles.formatPill, { backgroundColor: colors.softAccent }]}>
-          <View style={[styles.formatDot, { backgroundColor: colors.accent }]} />
+          <View style={[styles.formatDot, { backgroundColor: colors.primary }]} />
 
           <Text style={[styles.formatLabel, { color: colors.accent }]}>
             PDF
@@ -76,21 +78,21 @@ function UploadCard({ colors, isDark, busy, onPress }: {
           accessibilityLabel="Seleccionar PDF del dispositivo"
           disabled={busy}
           onPress={onPress}
-          style={({ pressed }) => [styles.uploadButton, { backgroundColor: colors.accent, opacity: busy ? 0.65 : pressed ? 0.83 : 1 }]}
+          style={({ pressed }) => [styles.uploadButton, { backgroundColor: colors.primary, opacity: busy ? 0.65 : pressed ? 0.83 : 1 }]}
         >
           <View style={styles.uploadButtonLeading}>
             {busy ? (
-              <ActivityIndicator size="small" color={isDark ? "#201B37" : "#FFFFFF"} />
+              <ActivityIndicator size="small" color={colors.onPrimary} />
             ) : (
-              <Plus size={20} strokeWidth={2} color={isDark ? "#201B37" : "#FFFFFF"} />
+              <Plus size={20} strokeWidth={2} color={colors.onPrimary} />
             )}
 
-            <Text style={[styles.uploadButtonText, { color: isDark ? "#201B37" : "#FFFFFF" }]}>
+            <Text style={[styles.uploadButtonText, { color: colors.onPrimary }]}>
               {busy ? "Subiendo documento" : "Seleccionar PDF"}
             </Text>
           </View>
 
-          {!busy && (<ArrowUpRight size={19} strokeWidth={1.8} color={isDark ? "#201B37" : "#FFFFFF"} />)}
+          {!busy && (<ArrowUpRight size={19} strokeWidth={1.8} color={colors.onPrimary} />)}
         </Pressable>
       </MotionView>
     </MotionPanel>
@@ -102,7 +104,7 @@ function UploadProgress({ upload, colors, isDark }: {
   colors: Palette;
   isDark: boolean;
 }) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const processing = upload.stage === "processing";
 
   useEffect(() => {
@@ -138,7 +140,7 @@ function UploadProgress({ upload, colors, isDark }: {
       </View>
 
       <View style={[styles.progressTrack, { backgroundColor: isDark ? "#39354E" : "#E9E5F3" }]}>
-        <Animated.View style={[styles.progressFill, { width, backgroundColor: colors.accent }]} />
+        <Animated.View style={[styles.progressFill, { width, backgroundColor: colors.primary }]} />
       </View>
     </MotionPanel>
   );
@@ -204,6 +206,7 @@ export default function DocumentsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
   const [upload, setUpload] =
     useState<UploadState | null>(null);
 
@@ -291,6 +294,7 @@ export default function DocumentsScreen() {
     if (uploadLock.current) return;
 
     uploadLock.current = true;
+    setUploadBusy(true);
     let requestStarted = false;
 
     try {
@@ -350,6 +354,7 @@ export default function DocumentsScreen() {
     } finally {
       setUpload(null);
       uploadLock.current = false;
+      setUploadBusy(false);
     }
   }
 
@@ -386,7 +391,7 @@ export default function DocumentsScreen() {
             <UploadCard
               colors={colors}
               isDark={isDark}
-              busy={uploadLock.current || upload !== null}
+              busy={uploadBusy}
               onPress={() => void selectPdf()}
             />
 
@@ -405,19 +410,56 @@ export default function DocumentsScreen() {
             ) : null}
 
             <View style={styles.library}>
+              {/* Encabezado de biblioteca */}
               <View style={styles.libraryHeading}>
-                <MotionText text="Tu biblioteca" delay={280} style={[styles.libraryTitle, { color: colors.text }]} />
+                <View style={styles.libraryTitleRow}>
+                  <MotionText text="Tu biblioteca" delay={280} style={[styles.libraryTitle, { color: colors.text }]} />
 
-                {data && (
-                  <MotionView delay={400} style={[styles.count, { backgroundColor: colors.softAccent }]}>
-                    <Text style={[styles.countText, { color: colors.accent }]}>
-                      {data.count}
+                  {data && (
+                    <MotionView delay={400} style={[styles.count, { backgroundColor: colors.softAccent }]}>
+                      <Text style={[styles.countText, { color: colors.accent }]}>
+                        {data.count}
+                      </Text>
+                    </MotionView>
+                  )}
+                </View>
+
+                {/* Accesos a cuestionarios y progreso */}
+                <View style={styles.libraryActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Ver todos mis cuestionarios"
+                    onPress={() => router.push("/quizzes")}
+                    style={({ pressed }) => [
+                      styles.quizzesLink,
+                      { backgroundColor: colors.softAccent, opacity: pressed ? 0.75 : 1 },
+                    ]}
+                  >
+                    <BookOpenCheck size={16} color={colors.accent} strokeWidth={1.8} />
+                    <Text style={[styles.quizzesLinkText, { color: colors.accent }]}>
+                      Cuestionarios
                     </Text>
-                  </MotionView>
-                )}
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Ver mi progreso académico"
+                    onPress={() => router.push("/progress")}
+                    style={({ pressed }) => [
+                      styles.quizzesLink,
+                      { backgroundColor: colors.softAccent, opacity: pressed ? 0.75 : 1 },
+                    ]}
+                  >
+                    <ChartNoAxesCombined size={16} color={colors.accent} strokeWidth={1.8} />
+                    <Text style={[styles.quizzesLinkText, { color: colors.accent }]}>
+                      Progreso
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
 
-              {listError ? (
+              {/* Error al consultar documentos */}
+              {listError && (
                 <View style={[styles.listError, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.errorMessage, { color: colors.secondary }]}>
                     {listError}
@@ -432,37 +474,37 @@ export default function DocumentsScreen() {
                     </Text>
                   </Pressable>
                 </View>
-              ) : null}
+              )}
 
+              {/* Estado de carga */}
               {loading && !data ? (
                 <View style={styles.skeletons}>
                   <SkeletonBlock height={70} radius={18} isDark={isDark} />
-
                   <SkeletonBlock height={70} radius={18} isDark={isDark} />
                 </View>
               ) : data?.documents.length ? (
+                /* Listado de documentos */
                 <MotionPanel
                   key={`documents-${revision}`}
                   delay={370}
                   style={[styles.list, { backgroundColor: colors.surface, borderColor: colors.outline }]}
                 >
-                  {data.documents.map(
-                    (document, index) => (
-                      <View key={document.id}>
-                        {index > 0 && (<View style={[styles.separator, { backgroundColor: colors.separator }]} />)}
+                  {data.documents.map((document, index) => (
+                    <View key={document.id}>
+                      {index > 0 && (
+                        <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+                      )}
 
-                        <DocumentRow
-                          document={document}
-                          index={index}
-                          colors={colors}
-                          onPress={() =>
-                            openDocument(document.id)
-                          }
-                        />
-                      </View>
-                    ),
-                  )}
+                      <DocumentRow
+                        document={document}
+                        index={index}
+                        colors={colors}
+                        onPress={() => openDocument(document.id)}
+                      />
+                    </View>
+                  ))}
 
+                  {/* Paginación */}
                   {data.documents.length < data.count && (
                     <Pressable
                       accessibilityRole="button"
@@ -477,7 +519,6 @@ export default function DocumentsScreen() {
                           <Text style={[styles.moreText, { color: colors.accent }]}>
                             Cargar más
                           </Text>
-
                           <ChevronDown size={17} color={colors.accent} />
                         </>
                       )}
@@ -485,6 +526,7 @@ export default function DocumentsScreen() {
                   )}
                 </MotionPanel>
               ) : !loading && !listError ? (
+                /* Estado vacío */
                 <MotionPanel
                   delay={370}
                   style={[styles.empty, { backgroundColor: colors.surface, borderColor: colors.outline }]}
@@ -497,7 +539,11 @@ export default function DocumentsScreen() {
                   </MotionIcon>
 
                   <View style={styles.emptyCopy}>
-                    <MotionText text="Todavía no hay documentos" delay={930} style={[styles.emptyTitle, { color: colors.text }]} />
+                    <MotionText
+                      text="Todavía no hay documentos"
+                      delay={930}
+                      style={[styles.emptyTitle, { color: colors.text }]}
+                    />
 
                     <MotionText
                       text="Tu primer PDF aparecerá aquí."
@@ -519,57 +565,61 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 42, gap: 22 },
   heading: { gap: 5 },
-  title: { fontSize: 29, fontWeight: "800", letterSpacing: -0.9 },
-  subtitle: { fontSize: 13, lineHeight: 19 },
+  title: { ...typography, fontSize: 29, fontWeight: "800", letterSpacing: -0.9 },
+  subtitle: { ...typography, fontSize: 14, lineHeight: 22 },
   uploadCard: { borderRadius: 22, borderWidth: 1, padding: 18 },
   uploadContent: { gap: 16 },
   uploadHeading: { flexDirection: "row", alignItems: "center", gap: 13 },
   uploadSymbol: { width: 51, height: 51, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   uploadHeadingCopy: { flex: 1, minWidth: 0, gap: 5, justifyContent: "center" },
-  uploadTitle: { fontSize: 16, fontWeight: "800", letterSpacing: -0.35, lineHeight: 21 },
-  uploadDescription: { fontSize: 12, lineHeight: 18 },
+  uploadTitle: { ...typography, fontSize: 16, fontWeight: "800", letterSpacing: -0.35, lineHeight: 21 },
+  uploadDescription: { ...typography, fontSize: 12, lineHeight: 18 },
   uploadDivider: { height: StyleSheet.hairlineWidth },
   uploadMetaRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   formatPill: { minHeight: 27, borderRadius: 8, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 6 },
   formatDot: { width: 6, height: 6, borderRadius: 3 },
-  formatLabel: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
-  uploadMetaText: { fontSize: 11, lineHeight: 16 },
+  formatLabel: { ...typography, fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
+  uploadMetaText: { ...typography, fontSize: 11, lineHeight: 16 },
   uploadButton: { minHeight: 50, borderRadius: 14, paddingHorizontal: 16, alignItems: "center", flexDirection: "row", justifyContent: "space-between", gap: 12 },
   uploadButtonLeading: { flexDirection: "row", alignItems: "center", gap: 10 },
-  uploadButtonText: { fontSize: 14, fontWeight: "800" },
+  uploadButtonText: { ...typography, fontSize: 14, fontWeight: "800" },
   progressCard: { padding: 15, borderRadius: 18, borderWidth: 1 },
   progressTop: { flexDirection: "row", alignItems: "center", gap: 11, marginBottom: 14 },
   progressIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   progressCopy: { flex: 1, minWidth: 0, gap: 5 },
-  progressFilename: { fontSize: 13, fontWeight: "700" },
-  progressDescription: { fontSize: 11 },
-  progressNumber: { fontSize: 13, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  progressFilename: { ...typography, fontSize: 13, fontWeight: "700" },
+  progressDescription: { ...typography, fontSize: 11 },
+  progressNumber: { ...typography, fontSize: 13, fontWeight: "800", fontVariant: ["tabular-nums"] },
   progressTrack: { height: 5, borderRadius: 8, overflow: "hidden" },
   progressFill: { height: 5, borderRadius: 8 },
   errorCard: { padding: 16, borderRadius: 17, borderWidth: 1, gap: 7 },
-  errorTitle: { fontSize: 13, fontWeight: "800" },
-  errorMessage: { fontSize: 12, lineHeight: 19 },
+  errorTitle: { ...typography, fontSize: 13, fontWeight: "800" },
+  errorMessage: { ...typography, fontSize: 12, lineHeight: 19 },
   library: { gap: 13 },
-  libraryHeading: { flexDirection: "row", alignItems: "center", gap: 10 },
-  libraryTitle: { fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
+  libraryHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
+  libraryTitleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  libraryTitle: { ...typography, fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
+  libraryActions: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 },
+  quizzesLink: { minHeight: 37, paddingHorizontal: 11, borderRadius: 11, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  quizzesLinkText: { ...typography, fontSize: 12, fontWeight: "800" },
   count: { minHeight: 24, paddingHorizontal: 9, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  countText: { fontSize: 11, fontWeight: "800" },
+  countText: { ...typography, fontSize: 11, fontWeight: "800" },
   listError: { padding: 15, borderRadius: 16, gap: 12 },
-  retryText: { fontSize: 12, fontWeight: "800" },
+  retryText: { ...typography, fontSize: 12, fontWeight: "800" },
   skeletons: { gap: 9 },
   list: { borderWidth: 1, borderRadius: 20, overflow: "hidden" },
   documentRow: { minHeight: 73, paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12 },
-  documentIcon: { width: 43, height: 43, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  documentIcon: { width: 44, height: 44, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   documentText: { flex: 1, minWidth: 0, gap: 5, justifyContent: "center" },
-  documentName: { fontSize: 13, fontWeight: "700", lineHeight: 18 },
-  documentMeta: { fontSize: 11, lineHeight: 16 },
+  documentName: { ...typography, fontSize: 13, fontWeight: "700", lineHeight: 18 },
+  documentMeta: { ...typography, fontSize: 11, lineHeight: 16 },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 69 },
   moreButton: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  moreText: { fontSize: 12, fontWeight: "700" },
+  moreText: { ...typography, fontSize: 12, fontWeight: "700" },
   empty: { borderRadius: 20, borderWidth: 1, padding: 18 },
   emptyContent: { flexDirection: "row", alignItems: "center", gap: 13 },
   emptyIcon: { width: 45, height: 45, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   emptyCopy: { flex: 1, minWidth: 0, gap: 5 },
-  emptyTitle: { fontSize: 13, fontWeight: "800" },
-  emptyDescription: { fontSize: 12, lineHeight: 18 },
+  emptyTitle: { ...typography, fontSize: 13, fontWeight: "800" },
+  emptyDescription: { ...typography, fontSize: 12, lineHeight: 18 },
 });

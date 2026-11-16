@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
 
 const features = [
@@ -25,10 +25,22 @@ const features = [
   },
 ] as const;
 
+function subscribeMotion(callback: () => void) {
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+
 export function LoginFeatures() {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const playingBeforePointer = useRef<boolean | null>(null);
   const [interacting, setInteracting] = useState(false);
+  const reducedMotion = useSyncExternalStore(
+    subscribeMotion,
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -58,11 +70,7 @@ export function LoginFeatures() {
       aria-roledescription="carrusel"
       onMouseEnter={() => setInteracting(true)}
       onMouseLeave={() => setInteracting(false)}
-      onFocusCapture={(event) => {
-        if (!(event.target instanceof Element) || !event.target.closest(".login-feature-play")) {
-          setPlaying(false);
-        }
-      }}
+      onFocusCapture={() => setPlaying(false)}
     >
       <div className="mb-6">
         <p className="mb-3 text-xs font-medium tracking-wide text-accent-foreground">
@@ -141,6 +149,33 @@ export function LoginFeatures() {
         ))}
       </div>
       <div className="login-feature-controls mt-5">
+        <button
+          type="button"
+          onPointerDown={() => { playingBeforePointer.current = playing; }}
+          onPointerCancel={() => { playingBeforePointer.current = null; }}
+          onClick={() => {
+            const previous = playingBeforePointer.current;
+            playingBeforePointer.current = null;
+            setPlaying((value) => !(previous ?? value));
+          }}
+          className="login-feature-play"
+          disabled={reducedMotion}
+          aria-label={
+            reducedMotion
+              ? "Presentación pausada por movimiento reducido"
+              : playing
+                ? "Pausar presentación"
+                : "Reanudar presentación"
+          }
+        >
+          <span
+            aria-hidden="true"
+            className={
+              playing && !reducedMotion ? "login-feature-pause-icon" : "login-feature-play-icon"
+            }
+          />
+          <span>{reducedMotion ? "Pausado" : playing ? "Pausar" : "Reanudar"}</span>
+        </button>
         <div className="flex gap-1" role="group" aria-label="Funciones de StudyAI">
           {features.map((feature, index) => (
             <button
@@ -157,17 +192,6 @@ export function LoginFeatures() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => setPlaying((value) => !value)}
-          className="login-feature-play"
-          aria-label={playing ? "Pausar presentación" : "Reproducir presentación"}
-        >
-          <span
-            aria-hidden="true"
-            className={playing ? "login-feature-pause-icon" : "login-feature-play-icon"}
-          />
-        </button>
       </div>
       <p className="mt-3 text-center text-xs text-muted">Ejemplos ilustrativos de StudyAI</p>
     </aside>

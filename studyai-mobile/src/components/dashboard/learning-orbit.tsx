@@ -1,11 +1,12 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { View } from "@/components/theme-primitives";
+import { LinearGradient } from "@/components/theme-gradient";
 import { BrainCircuit } from "lucide-react-native";
-import { useEffect, useRef } from "react";
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { AccessibilityInfo, Animated, Easing, StyleSheet } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
 export function LearningOrbit() {
-  const float = useRef(new Animated.Value(0)).current;
+  const [float] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let active = true;

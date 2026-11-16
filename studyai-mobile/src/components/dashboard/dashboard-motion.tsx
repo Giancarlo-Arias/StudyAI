@@ -1,7 +1,8 @@
+import { View, useSurfaceTransition } from "@/components/theme-primitives";
 import { useIsFocused } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "@/components/theme-gradient";
 import { useEffect, useState, type ReactNode } from "react";
-import { StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { StyleSheet, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import Animated, { Easing, cancelAnimation, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSpring, withTiming } from "react-native-reanimated";
 
 type MotionProps = {
@@ -12,20 +13,13 @@ type MotionProps = {
 
 const EASE = Easing.bezier(0.22, 0.8, 0.2, 1);
 
-// Evita mostrar datos antiguos antes de iniciar la animación.
-export function TabScene({ children }: {
-  children: ReactNode;
-}) {
+// Cada entrada de pestaña reinicia su secuencia de componentes.
+export function TabScene({ children }: { children: ReactNode }) {
   const focused = useIsFocused();
-
-  return focused ? (
-    <>{children}</>
-  ) : (
-    <View style={styles.offscreen} />
-  );
+  return focused ? <>{children}</> : <View style={styles.offscreen} />;
 }
 
-// Entrada horizontal de izquierda a derecha.
+// Entrada breve que mantiene la continuidad entre superficies.
 export function MotionView({ children, delay = 0, style }: MotionProps) {
   const reduced = useReducedMotion();
   const progress = useSharedValue(reduced ? 1 : 0);
@@ -63,17 +57,17 @@ export function MotionText({ text, delay = 0, numberOfLines, style, containerSty
     progress.value = reduced ? 1 : 0;
 
     if (!reduced) {
-      progress.value = withDelay(delay, withTiming(1, { duration: 530, easing: EASE }),);
+      progress.value = withDelay(delay, withTiming(1, { duration: 520, easing: EASE }),);
     }
 
     return () => cancelAnimation(progress);
-  }, [delay, progress, reduced, text]);
+  }, [delay, progress, reduced]);
 
-  const animated = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateX: (1 - progress.value) * -26 }] }));
+  const animated = useAnimatedStyle(() => ({ opacity: progress.value, transform: [{ translateY: (1 - progress.value) * 5 }] }));
 
   return (
     <View accessible accessibilityRole="text" accessibilityLabel={text} style={[styles.mask, containerStyle]}>
-      <Animated.Text numberOfLines={numberOfLines} style={[style, animated]}>
+      <Animated.Text numberOfLines={numberOfLines} style={[style, animated, { transitionProperty: "color", transitionDuration: reduced ? 0 : 320 }]}>
         {text}
       </Animated.Text>
     </View>
@@ -119,6 +113,7 @@ export function MotionPanel({ children, delay = 0, style, contentStyle }: Motion
   contentStyle?: StyleProp<ViewStyle>;
 }) {
   const reduced = useReducedMotion();
+  const colorTransition = useSurfaceTransition();
   const progress = useSharedValue(reduced ? 1 : 0);
 
   useEffect(() => {
@@ -150,7 +145,7 @@ export function MotionPanel({ children, delay = 0, style, contentStyle }: Motion
   }));
 
   return (
-    <Animated.View style={[style, surface]}>
+    <Animated.View style={[style, surface, colorTransition]}>
       <Animated.View style={[styles.panelContent, contentStyle, content]}>
         {children}
       </Animated.View>
@@ -165,18 +160,19 @@ export function SkeletonBlock({ height, isDark, width = "100%", radius = 15 }: {
   radius?: number;
 }) {
   const reduced = useReducedMotion();
+  const focused = useIsFocused();
   const [measuredWidth, setMeasuredWidth] = useState(0);
   const sweep = useSharedValue(0);
 
   useEffect(() => {
-    if (reduced || measuredWidth === 0) return;
+    if (reduced || !focused || measuredWidth === 0) return;
 
     sweep.value = 0;
 
     sweep.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.linear }), -1, false,);
 
     return () => cancelAnimation(sweep);
-  }, [measuredWidth, reduced, sweep]);
+  }, [focused, measuredWidth, reduced, sweep]);
 
   const animated = useAnimatedStyle(() => ({ transform: [{ translateX: -140 + (measuredWidth + 280) * sweep.value }] }));
 
@@ -204,7 +200,7 @@ export function SkeletonBlock({ height, isDark, width = "100%", radius = 15 }: {
 
 const styles = StyleSheet.create({
   offscreen: { flex: 1 },
-  mask: { overflow: "hidden" },
+  mask: { overflow: "visible", minWidth: 0, flexShrink: 1 },
   panelContent: { width: "100%" },
   sweep: { position: "absolute", top: 0, bottom: 0, left: 0, width: 140 },
 });

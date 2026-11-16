@@ -1,12 +1,15 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { typography } from "@/styles/typography";
+import { goBack } from "@/lib/navigation";
+import { LinearGradient } from "@/components/theme-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, BookOpen, Check, CheckCircle2, ChevronRight, FileText, Sparkles } from "lucide-react-native";
+import { ArrowLeft, BookOpen, Check, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Sparkles } from "lucide-react-native";
 import { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionIcon, MotionPanel, MotionText } from "@/components/dashboard/dashboard-motion";
-import { generateStudyQuiz, type GeneratedQuiz, type QuizDifficulty } from "@/lib/quizzes-api";
+import { generateStudyQuiz, type GeneratedQuiz, type QuizDifficulty, type QuizMode } from "@/lib/quizzes-api";
 import { getDashboardPalette } from "@/styles/dashboard-overview.styles";
 
 const DIFFICULTIES: { value: QuizDifficulty; label: string; description: string }[] = [
@@ -19,16 +22,14 @@ const QUESTION_COUNTS = [5, 10, 15, 20] as const;
 
 export default function CreateQuizScreen() {
   const router = useRouter();
-  const { documentId: id, filename: name } = useLocalSearchParams<{ documentId: string; filename: string }>();
+  const { documentId: id, filename: name } = useLocalSearchParams<{ documentId?: string; filename?: string }>();
 
   const documentId = typeof id === "string" ? id : "";
   const filename = typeof name === "string" ? name : "Documento";
-
   const isDark = useColorScheme() === "dark";
   const colors = getDashboardPalette(isDark);
-  const buttonTextColor = isDark ? "#201B37" : "#FFFFFF";
-
-  const generatingLock = useRef(false);
+  const buttonTextColor = colors.onPrimary;
+  const generationLock = useRef(false);
 
   const [difficulty, setDifficulty] = useState<QuizDifficulty>("intermedia");
   const [questionCount, setQuestionCount] = useState(5);
@@ -36,15 +37,12 @@ export default function CreateQuizScreen() {
   const [generated, setGenerated] = useState<GeneratedQuiz | null>(null);
   const [error, setError] = useState("");
 
-  const title = useMemo(() => {
-    const name = filename.replace(/\.pdf$/i, "").trim();
-    return `Cuestionario: ${name || "Documento"}`;
-  }, [filename]);
+  const title = useMemo(() => `Cuestionario: ${filename.replace(/\.pdf$/i, "").trim() || "Documento"}`, [filename]);
 
   async function handleGenerate() {
-    if (generatingLock.current || generated) return;
+    if (generationLock.current || generated) return;
 
-    generatingLock.current = true;
+    generationLock.current = true;
     setGenerating(true);
     setError("");
 
@@ -53,14 +51,16 @@ export default function CreateQuizScreen() {
       setGenerated(result);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "No se pudo generar el cuestionario.";
-
-      setError(
-        `${message}\n\nSi se interrumpió la conexión, verifica antes de intentarlo otra vez: el servidor podría haber guardado el cuestionario.`
-      );
+      setError(`${message}\n\nSi se interrumpió la conexión, comprueba el listado de cuestionarios antes de repetir la generación.`);
     } finally {
       setGenerating(false);
-      generatingLock.current = false;
+      generationLock.current = false;
     }
+  }
+
+  function openMode(mode: QuizMode) {
+    if (!generated?.id) return;
+    router.push({ pathname: "/quiz/[id]", params: { id: generated.id, mode } });
   }
 
   return (
@@ -71,7 +71,7 @@ export default function CreateQuizScreen() {
             accessibilityRole="button"
             accessibilityLabel="Volver al documento"
             disabled={generating}
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             style={[styles.backButton, { backgroundColor: colors.surface }]}
           >
             <ArrowLeft size={21} color={colors.text} />
@@ -82,7 +82,6 @@ export default function CreateQuizScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          {/* Encabezado */}
           <View style={styles.heading}>
             <MotionIcon delay={120}>
               <View style={[styles.headingIcon, { backgroundColor: colors.softAccent }]}>
@@ -90,12 +89,7 @@ export default function CreateQuizScreen() {
               </View>
             </MotionIcon>
 
-            <MotionText
-              text="Prepara tu estudio"
-              delay={220}
-              style={[styles.title, { color: colors.text }]}
-            />
-
+            <MotionText text="Prepara tu estudio" delay={220} style={[styles.title, { color: colors.text }]} />
             <MotionText
               text="Personaliza las preguntas que la IA creará a partir de tu documento."
               delay={300}
@@ -103,7 +97,6 @@ export default function CreateQuizScreen() {
             />
           </View>
 
-          {/* Documento seleccionado */}
           <MotionPanel
             delay={230}
             style={[styles.documentCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}
@@ -115,9 +108,7 @@ export default function CreateQuizScreen() {
 
             <View style={styles.documentCopy}>
               <Text style={[styles.documentLabel, { color: colors.secondary }]}>DOCUMENTO SELECCIONADO</Text>
-              <Text numberOfLines={2} style={[styles.documentName, { color: colors.text }]}>
-                {filename}
-              </Text>
+              <Text numberOfLines={2} style={[styles.documentName, { color: colors.text }]}>{filename}</Text>
             </View>
 
             <CheckCircle2 size={19} color={colors.accent} />
@@ -125,13 +116,8 @@ export default function CreateQuizScreen() {
 
           {!generated ? (
             <>
-              {/* Dificultad */}
               <View style={styles.section}>
-                <MotionText
-                  text="Nivel de dificultad"
-                  delay={380}
-                  style={[styles.sectionTitle, { color: colors.text }]}
-                />
+                <MotionText text="Nivel de dificultad" delay={380} style={[styles.sectionTitle, { color: colors.text }]} />
 
                 <MotionPanel
                   delay={450}
@@ -142,9 +128,7 @@ export default function CreateQuizScreen() {
 
                     return (
                       <View key={option.value}>
-                        {index > 0 && (
-                          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
-                        )}
+                        {index > 0 && <View style={[styles.divider, { backgroundColor: colors.separator }]} />}
 
                         <Pressable
                           accessibilityRole="radio"
@@ -162,14 +146,11 @@ export default function CreateQuizScreen() {
                             </Text>
                           </View>
 
-                          <View style={[
-                            styles.radio,
-                            {
-                              borderColor: selected ? colors.accent : colors.outline,
-                              backgroundColor: selected ? colors.accent : "transparent",
-                            },
-                          ]}>
-                            {selected && <Check size={13} color={buttonTextColor} strokeWidth={3} />}
+                          <View style={[styles.radio, {
+                            borderColor: selected ? colors.accent : colors.controlOutline,
+                            backgroundColor: selected ? colors.accent : "transparent",
+                          }]}>
+                            {selected && <Check size={13} color={isDark ? "#201B37" : "#FFFFFF"} strokeWidth={3} />}
                           </View>
                         </Pressable>
                       </View>
@@ -178,13 +159,8 @@ export default function CreateQuizScreen() {
                 </MotionPanel>
               </View>
 
-              {/* Cantidad de preguntas */}
               <View style={styles.section}>
-                <MotionText
-                  text="Cantidad de preguntas"
-                  delay={540}
-                  style={[styles.sectionTitle, { color: colors.text }]}
-                />
+                <MotionText text="Cantidad de preguntas" delay={540} style={[styles.sectionTitle, { color: colors.text }]} />
 
                 <MotionPanel delay={600} style={styles.countGrid} contentStyle={styles.countGridContent}>
                   {QUESTION_COUNTS.map((count) => {
@@ -197,13 +173,10 @@ export default function CreateQuizScreen() {
                         accessibilityState={{ checked: selected, disabled: generating }}
                         disabled={generating}
                         onPress={() => setQuestionCount(count)}
-                        style={[
-                          styles.countOption,
-                          {
-                            backgroundColor: selected ? colors.softAccent : colors.surface,
-                            borderColor: selected ? colors.accent : colors.outline,
-                          },
-                        ]}
+                        style={[styles.countOption, {
+                          backgroundColor: selected ? colors.softAccent : colors.surface,
+                          borderColor: selected ? colors.accent : colors.controlOutline,
+                        }]}
                       >
                         <Text style={[styles.countValue, { color: selected ? colors.accent : colors.text }]}>
                           {count}
@@ -215,7 +188,6 @@ export default function CreateQuizScreen() {
                 </MotionPanel>
               </View>
 
-              {/* Resumen */}
               <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
                 <BookOpen size={18} color={colors.accent} />
 
@@ -227,26 +199,21 @@ export default function CreateQuizScreen() {
                 </View>
               </View>
 
-              {/* Error */}
               {error ? (
                 <View style={[styles.errorCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
                   <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
                 </View>
               ) : null}
 
-              {/* Generar */}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Generar cuestionario con IA"
                 disabled={generating || !documentId}
                 onPress={() => void handleGenerate()}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  {
-                    backgroundColor: colors.accent,
-                    opacity: generating || !documentId ? 0.65 : pressed ? 0.85 : 1,
-                  },
-                ]}
+                style={({ pressed }) => [styles.primaryButton, {
+                  backgroundColor: colors.primary,
+                  opacity: generating || !documentId ? 0.65 : pressed ? 0.85 : 1,
+                }]}
               >
                 {generating
                   ? <ActivityIndicator color={buttonTextColor} />
@@ -267,7 +234,6 @@ export default function CreateQuizScreen() {
               )}
             </>
           ) : (
-            /* Cuestionario generado */
             <MotionPanel
               delay={100}
               style={[styles.successCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}
@@ -275,38 +241,84 @@ export default function CreateQuizScreen() {
             >
               <MotionIcon delay={420}>
                 <View style={[styles.successIcon, { backgroundColor: colors.softAccent }]}>
-                  <CheckCircle2 size={32} color={colors.accent} />
+                  <CheckCircle2 size={31} color={colors.accent} />
                 </View>
               </MotionIcon>
 
-              <MotionText
-                text="¡Cuestionario creado!"
-                delay={530}
-                style={[styles.successTitle, { color: colors.text }]}
-              />
+              <View style={styles.successText}>
+                <MotionText
+                  text="¡Cuestionario creado!"
+                  delay={510}
+                  style={[styles.successTitle, { color: colors.text }]}
+                />
+                <MotionText
+                  text="Selecciona cómo quieres responder las preguntas."
+                  delay={600}
+                  style={[styles.successDescription, { color: colors.secondary }]}
+                />
+              </View>
 
-              <MotionText
-                text="Las preguntas fueron generadas y guardadas en StudyAI."
-                delay={650}
-                style={[styles.successDescription, { color: colors.secondary }]}
-              />
+              <Text style={[styles.successName, { color: colors.text }]}>{generated.title}</Text>
 
-              <Text numberOfLines={3} style={[styles.successName, { color: colors.text }]}>
-                {generated.title}
-              </Text>
+              {generated.id ? (
+                <View style={styles.modeChoices}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => openMode("practice")}
+                    style={({ pressed }) => [
+                      styles.modeCard,
+                      { backgroundColor: colors.softAccent, borderColor: colors.accent, opacity: pressed ? 0.8 : 1 },
+                    ]}
+                  >
+                    <View style={[styles.modeIcon, { backgroundColor: colors.primary }]}>
+                      <BookOpen size={21} color={buttonTextColor} />
+                    </View>
 
-              <Text style={[styles.successNote, { color: colors.secondary }]}>
-                En el siguiente paso conectaremos la pantalla para responderlo en Práctica o Examen.
-              </Text>
+                    <View style={styles.modeCopy}>
+                      <Text style={[styles.modeTitle, { color: colors.text }]}>Modo Práctica</Text>
+                      <Text style={[styles.modeDescription, { color: colors.secondary }]}>
+                        Navega libremente y repasa tus respuestas.
+                      </Text>
+                    </View>
+
+                    <ChevronRight size={19} color={colors.accent} />
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => openMode("exam")}
+                    style={({ pressed }) => [
+                      styles.modeCard,
+                      { backgroundColor: colors.surface, borderColor: colors.outline, opacity: pressed ? 0.8 : 1 },
+                    ]}
+                  >
+                    <View style={[styles.modeIcon, { backgroundColor: colors.softAccent }]}>
+                      <ClipboardCheck size={21} color={colors.accent} />
+                    </View>
+
+                    <View style={styles.modeCopy}>
+                      <Text style={[styles.modeTitle, { color: colors.text }]}>Modo Examen</Text>
+                      <Text style={[styles.modeDescription, { color: colors.secondary }]}>
+                        Avanza pregunta a pregunta y recibe tu nota al finalizar.
+                      </Text>
+                    </View>
+
+                    <ChevronRight size={19} color={colors.accent} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Text style={[styles.successNote, { color: colors.secondary }]}>
+                  FastAPI confirmó la generación, pero no devolvió el ID del cuestionario.
+                  Comprueba tu listado antes de generar otro.
+                </Text>
+              )}
 
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.back()}
-                style={[styles.returnButton, { backgroundColor: colors.accent }]}
+                onPress={() => goBack()}
+                style={[styles.returnButton, { borderColor: colors.outline }]}
               >
-                <Text style={[styles.returnText, { color: buttonTextColor }]}>
-                  Volver al documento
-                </Text>
+                <Text style={[styles.returnText, { color: colors.secondary }]}>Volver al documento</Text>
               </Pressable>
             </MotionPanel>
           )}
@@ -318,59 +330,57 @@ export default function CreateQuizScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-
   topbar: { height: 65, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  backButton: { width: 43, height: 43, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  topbarTitle: { fontSize: 14, fontWeight: "800" },
-
+  backButton: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  topbarTitle: { ...typography, fontSize: 14, fontWeight: "800" },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 45, gap: 23 },
   heading: { gap: 9, alignItems: "flex-start" },
   headingIcon: { width: 51, height: 51, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 27, fontWeight: "800", letterSpacing: -0.8 },
-  subtitle: { fontSize: 13, lineHeight: 20 },
-
+  title: { ...typography, fontSize: 27, fontWeight: "800", letterSpacing: -0.8 },
+  subtitle: { ...typography, fontSize: 14, lineHeight: 22 },
   documentCard: { borderWidth: 1, borderRadius: 19, padding: 15 },
   documentRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   fileIcon: { width: 45, height: 45, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   documentCopy: { flex: 1, minWidth: 0, gap: 5 },
-  documentLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 0.65 },
-  documentName: { fontSize: 13, lineHeight: 19, fontWeight: "700" },
-
+  documentLabel: { ...typography, fontSize: 10, fontWeight: "800", letterSpacing: 0.65 },
+  documentName: { ...typography, fontSize: 13, lineHeight: 19, fontWeight: "700" },
   section: { gap: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", letterSpacing: -0.3 },
+  sectionTitle: { ...typography, fontSize: 16, fontWeight: "800", letterSpacing: -0.3 },
   difficultyCard: { borderWidth: 1, borderRadius: 19, overflow: "hidden" },
   optionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 67, paddingHorizontal: 17, paddingVertical: 12, gap: 12 },
   optionCopy: { flex: 1, gap: 5 },
-  optionTitle: { fontSize: 14, fontWeight: "800" },
-  optionDescription: { fontSize: 12 },
+  optionTitle: { ...typography, fontSize: 14, fontWeight: "800" },
+  optionDescription: { ...typography, fontSize: 12 },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 17 },
-
   countGrid: { borderRadius: 19 },
   countGridContent: { flexDirection: "row", gap: 9 },
   countOption: { flex: 1, minWidth: 0, borderWidth: 1, borderRadius: 15, paddingVertical: 15, alignItems: "center", gap: 5 },
-  countValue: { fontSize: 21, fontWeight: "800" },
-  countCaption: { fontSize: 10 },
-
+  countValue: { ...typography, fontSize: 21, fontWeight: "800" },
+  countCaption: { ...typography, fontSize: 10 },
   summaryCard: { padding: 15, borderRadius: 17, flexDirection: "row", alignItems: "center", gap: 11 },
   summaryCopy: { flex: 1, gap: 4 },
-  summaryTitle: { fontSize: 13, fontWeight: "800" },
-  summaryDescription: { fontSize: 12 },
-
+  summaryTitle: { ...typography, fontSize: 13, fontWeight: "800" },
+  summaryDescription: { ...typography, fontSize: 12 },
   errorCard: { padding: 15, borderWidth: 1, borderRadius: 15 },
-  errorText: { fontSize: 12, lineHeight: 19 },
-
+  errorText: { ...typography, fontSize: 12, lineHeight: 19 },
   primaryButton: { minHeight: 54, paddingHorizontal: 18, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 11 },
-  primaryButtonText: { fontSize: 14, fontWeight: "800" },
-  generatingHint: { marginTop: -12, fontSize: 12, lineHeight: 19, textAlign: "center" },
-
-  successCard: { padding: 22, borderWidth: 1, borderRadius: 22 },
-  successContent: { alignItems: "center", gap: 13 },
-  successIcon: { width: 65, height: 65, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  successTitle: { fontSize: 21, fontWeight: "800", textAlign: "center" },
-  successDescription: { fontSize: 13, lineHeight: 20, textAlign: "center" },
-  successName: { fontSize: 13, lineHeight: 19, fontWeight: "700", textAlign: "center" },
-  successNote: { fontSize: 12, lineHeight: 20, textAlign: "center" },
-  returnButton: { width: "100%", minHeight: 49, borderRadius: 15, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  returnText: { fontSize: 13, fontWeight: "800" },
+  primaryButtonText: { ...typography, fontSize: 14, fontWeight: "800" },
+  generatingHint: { ...typography, marginTop: -12, fontSize: 12, lineHeight: 19, textAlign: "center" },
+  successCard: { borderRadius: 22, borderWidth: 1, padding: 18 },
+  successContent: { gap: 17 },
+  successIcon: { width: 58, height: 58, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  successText: { gap: 6 },
+  successTitle: { ...typography, fontSize: 22, fontWeight: "800" },
+  successDescription: { ...typography, fontSize: 13, lineHeight: 20 },
+  successName: { ...typography, fontSize: 13, fontWeight: "700", lineHeight: 19 },
+  successNote: { ...typography, fontSize: 12, lineHeight: 20 },
+  modeChoices: { gap: 11 },
+  modeCard: { minHeight: 83, borderWidth: 1, borderRadius: 16, padding: 13, flexDirection: "row", alignItems: "center", gap: 12 },
+  modeIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  modeCopy: { flex: 1, gap: 5 },
+  modeTitle: { ...typography, fontSize: 14, fontWeight: "800" },
+  modeDescription: { ...typography, fontSize: 11, lineHeight: 16 },
+  returnButton: { minHeight: 47, borderWidth: 1, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  returnText: { ...typography, fontSize: 13, fontWeight: "700" },
 });

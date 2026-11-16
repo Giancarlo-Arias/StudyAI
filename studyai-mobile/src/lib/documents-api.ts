@@ -1,3 +1,4 @@
+import { expireSession } from "@/lib/session-events";
 import * as SecureStore from "expo-secure-store";
 import { Directory, File, Paths, UploadType } from "expo-file-system";
 import type { DocumentPickerAsset } from "expo-document-picker";
@@ -62,9 +63,7 @@ async function getToken(): Promise<string> {
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
 
   if (!token) {
-    throw new Error(
-      "Tu sesión no está disponible. Inicia sesión nuevamente.",
-    );
+    throw expireSession();
   }
 
   return token;
@@ -127,9 +126,7 @@ function assertSuccess(
   if (status >= 200 && status < 300) return;
 
   if (status === 401) {
-    throw new Error(
-      "Tu sesión expiró. Inicia sesión nuevamente.",
-    );
+    throw expireSession();
   }
 
   throw new Error(getErrorMessage(payload, fallback));

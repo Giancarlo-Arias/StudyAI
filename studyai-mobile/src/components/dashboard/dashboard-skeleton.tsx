@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
-import { AccessibilityInfo, Animated, Easing, View } from "react-native";
+import { View } from "@/components/theme-primitives";
+import { useEffect, useState } from "react";
+import { AccessibilityInfo, Animated, Easing } from "react-native";
 
 import type { DashboardStyles } from "@/styles/dashboard.styles";
 
@@ -8,7 +9,7 @@ type Props = {
 };
 
 export function DashboardSkeleton({ styles }: Props) {
-  const pulse = useRef(new Animated.Value(0.55)).current;
+  const [pulse] = useState(() => new Animated.Value(0.55));
 
   useEffect(() => {
     let active = true;

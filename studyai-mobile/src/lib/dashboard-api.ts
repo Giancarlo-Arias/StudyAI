@@ -1,3 +1,4 @@
+import { expireSession } from "@/lib/session-events";
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "studyai_access_token";
@@ -71,7 +72,7 @@ async function authenticatedGet<T>(path: string): Promise<T> {
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
 
   if (!token) {
-    throw new Error("Tu sesión no está disponible.");
+    throw expireSession();
   }
 
   const response = await fetch(getEndpoint(path), {
@@ -84,7 +85,7 @@ async function authenticatedGet<T>(path: string): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error("Tu sesión ha expirado.");
+      throw expireSession();
     }
 
     throw new Error(

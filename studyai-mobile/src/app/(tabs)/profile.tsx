@@ -1,7 +1,9 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { typography } from "@/styles/typography";
+import { LinearGradient } from "@/components/theme-gradient";
 import { Mail, UserRound } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionIcon, MotionPanel, MotionText, MotionView, SkeletonBlock, TabScene } from "@/components/dashboard/dashboard-motion";
@@ -21,7 +23,6 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
 
     void getCurrentUser().then((value) => {
       if (!active) return;
@@ -143,9 +144,10 @@ export default function ProfileScreen() {
 
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() =>
-                    setRetryKey((n) => n + 1)
-                  }
+                  onPress={() => {
+                    setLoading(true);
+                    setRetryKey((n) => n + 1);
+                  }}
                 >
                   <Text style={[styles.retry, { color: c.accent }]}>
                     Reintentar
@@ -164,25 +166,25 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 40, gap: 20 },
   header: { gap: 5 },
-  title: { fontSize: 29, fontWeight: "800", letterSpacing: -0.9 },
-  subtitle: { fontSize: 13, lineHeight: 19 },
+  title: { ...typography, fontSize: 29, fontWeight: "800", letterSpacing: -0.9 },
+  subtitle: { ...typography, fontSize: 14, lineHeight: 22 },
   loading: { gap: 14 },
   identity: { borderRadius: 21, borderWidth: 1, padding: 20 },
   identityContent: { alignItems: "center", gap: 8 },
   avatar: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", marginBottom: 6 },
-  initials: { fontSize: 24, fontWeight: "800" },
-  name: { fontSize: 20, fontWeight: "800", textAlign: "center", letterSpacing: -0.5 },
-  email: { fontSize: 13, lineHeight: 19, textAlign: "center" },
+  initials: { ...typography, fontSize: 24, fontWeight: "800" },
+  name: { ...typography, fontSize: 20, fontWeight: "800", textAlign: "center", letterSpacing: -0.5 },
+  email: { ...typography, fontSize: 13, lineHeight: 19, textAlign: "center" },
   details: { gap: 10 },
-  sectionTitle: { paddingHorizontal: 4, fontSize: 12, fontWeight: "700" },
+  sectionTitle: { ...typography, paddingHorizontal: 4, fontSize: 12, fontWeight: "700" },
   detailsCard: { borderRadius: 20, borderWidth: 1, overflow: "hidden" },
   detailRow: { minHeight: 70, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },
   detailIcon: { width: 26, height: 26, alignItems: "center", justifyContent: "center" },
   detailText: { flex: 1, minWidth: 0, gap: 4, justifyContent: "center" },
-  detailLabel: { fontSize: 11, fontWeight: "600" },
-  detailValue: { fontSize: 14, fontWeight: "600", lineHeight: 19 },
+  detailLabel: { ...typography, fontSize: 11, fontWeight: "600" },
+  detailValue: { ...typography, fontSize: 14, fontWeight: "600", lineHeight: 19 },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 54 },
   errorCard: { borderRadius: 20, padding: 18 },
   errorContent: { gap: 12 },
-  retry: { fontSize: 13, fontWeight: "700" },
+  retry: { ...typography, fontSize: 13, fontWeight: "700" },
 });

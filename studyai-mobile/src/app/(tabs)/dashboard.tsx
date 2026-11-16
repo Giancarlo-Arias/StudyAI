@@ -1,21 +1,21 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Pressable, Text, View } from "@/components/theme-primitives";
+import { useThemeTransition } from "@/components/theme-transition";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
-import { LinearGradient } from "expo-linear-gradient";
+import { LinearGradient } from "@/components/theme-gradient";
 import { useRouter } from "expo-router";
-import { ArrowUpRight, ChartNoAxesCombined, ChevronRight, FileText, LogOut, Moon, NotebookPen, Sparkles, Sun } from "lucide-react-native";
+import { ArrowUpRight, ChartNoAxesCombined, ChevronRight, FileText, LogOut, Moon, NotebookPen, Sparkles, Sun, Trophy } from "lucide-react-native";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ActivityIndicator, Appearance, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AnimatedNumber } from "@/components/dashboard/animated-number";
 import { MotionIcon, MotionPanel, MotionText, MotionView, SkeletonBlock, TabScene } from "@/components/dashboard/dashboard-motion";
-import { StagedScoreChart } from "@/components/dashboard/staged-score-chart";
+import { ScoreChart } from "@/components/dashboard/score-chart";
 import { getDashboardData, getStudyDocuments, type DashboardData, type DocumentsResponse } from "@/lib/dashboard-api";
 import { getCurrentUser, signOut, type CurrentUser } from "@/lib/mobile-auth";
+import { readDashboardEntry, releaseDashboardEntry } from "@/lib/dashboard-entry";
 import { createOverviewStyles, getDashboardPalette, type OverviewStyles } from "@/styles/dashboard-overview.styles";
-
-const THEME_KEY = "studyai_theme";
 
 const HAS_GLASS =
   Platform.OS === "ios" && isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
@@ -37,7 +37,7 @@ function RoundAction({ label, icon, onPress, isDark, styles, disabled = false }:
 
   function press(value: number) {
     if (!reduced) {
-      scale.value = withSpring(value, { damping: 17, stiffness: 260 });
+      scale.set(withSpring(value, { damping: 17, stiffness: 260 }));
     }
   }
 
@@ -93,6 +93,7 @@ function Metric({ icon, label, value, suffix = "", color, order, styles }: {
           value={value}
           label={label}
           suffix={suffix}
+          decimalPlaces={suffix === "%" ? 1 : 0}
           delay={780 + delay}
           duration={900}
           style={[styles.metricValue, local.metricValue, { color }]}
@@ -121,7 +122,7 @@ function RecentFile({ filename, pages, index, colors, styles, onPress }: {
 
   function press(value: number) {
     if (!reduced) {
-      scale.value = withSpring(value, { damping: 20, stiffness: 250 });
+      scale.set(withSpring(value, { damping: 20, stiffness: 250 }));
     }
   }
 
@@ -180,6 +181,10 @@ function InitialSkeleton({ isDark }: {
 }
 
 export default function DashboardScreen() {
+  const changeTheme = useThemeTransition();
+  async function toggleTheme() {
+    try { await changeTheme(); } catch { /* La preferencia visual ya se aplico. */ }
+  }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === "dark";
@@ -194,21 +199,22 @@ export default function DashboardScreen() {
     [isDark],
   );
 
+  const [entry] = useState(readDashboardEntry);
   const [user, setUser] =
-    useState<CurrentUser | null>(null);
+    useState<CurrentUser | null>(entry?.user ?? null);
 
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(!entry?.user);
   const [redirecting, setRedirecting] = useState(false);
   const [authError, setAuthError] = useState("");
 
   const [overview, setOverview] =
-    useState<DashboardData | null>(null);
+    useState<DashboardData | null>(entry?.overview ?? null);
 
   const [documents, setDocuments] =
-    useState<DocumentsResponse | null>(null);
+    useState<DocumentsResponse | null>(entry?.documents ?? null);
 
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [docsLoading, setDocsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(!entry?.overview);
+  const [docsLoading, setDocsLoading] = useState(!entry?.documents);
   const [statsError, setStatsError] = useState("");
   const [docsError, setDocsError] = useState("");
 
@@ -218,13 +224,15 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [loadKey, setLoadKey] = useState(0);
+  const userId = user?.id;
 
   useEffect(() => {
+    releaseDashboardEntry(entry);
     let active = true;
 
     async function checkSession() {
       try {
-        const current = await getCurrentUser();
+        const current = await (entry?.userRequest ?? getCurrentUser());
 
         if (!active) return;
 
@@ -252,17 +260,14 @@ export default function DashboardScreen() {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [entry, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (userId === undefined) return;
 
     let active = true;
 
-    setStatsLoading(true);
-    setDocsLoading(true);
-
-    const statsRequest = getDashboardData().then((data) => {
+    const statsRequest = (loadKey === 0 && entry ? entry.statsRequest : getDashboardData()).then((data) => {
       if (!active) return;
 
       setOverview(data);
@@ -280,7 +285,7 @@ export default function DashboardScreen() {
         if (active) setStatsLoading(false);
       });
 
-    const docsRequest = getStudyDocuments(3, 0).then((data) => {
+    const docsRequest = (loadKey === 0 && entry ? entry.docsRequest : getStudyDocuments(3, 0)).then((data) => {
       if (!active) return;
 
       setDocuments(data);
@@ -305,7 +310,7 @@ export default function DashboardScreen() {
     return () => {
       active = false;
     };
-  }, [user?.id, loadKey]);
+  }, [entry, userId, loadKey]);
 
   function refresh() {
     if (refreshing || statsLoading || docsLoading) {
@@ -313,18 +318,11 @@ export default function DashboardScreen() {
     }
 
     setRefreshing(true);
+    setStatsLoading(true);
+    setDocsLoading(true);
     setLoadKey((key) => key + 1);
   }
 
-  async function toggleTheme() {
-    const next = isDark ? "light" : "dark";
-
-    Appearance.setColorScheme(next);
-
-    try {
-      await AsyncStorage.setItem(THEME_KEY, next);
-    } catch { }
-  }
 
   async function logout() {
     if (loggingOut) return;
@@ -372,6 +370,19 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.actions}>
+            <RoundAction
+              label="Ver mis logros"
+              onPress={() => router.push("/achievements")}
+              isDark={isDark}
+              styles={styles}
+              icon={
+                <Trophy
+                  size={19}
+                  color={colors.accent}
+                  strokeWidth={1.8}
+                />
+              }
+            />
             <RoundAction
               label={isDark ? "Activar tema claro" : "Activar tema oscuro"}
               onPress={() => void toggleTheme()}
@@ -441,18 +452,12 @@ export default function DashboardScreen() {
               contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 18) + 24 }]}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.accent} />}
             >
-              <View style={styles.intro}>
-                <View style={styles.introRow}>
-                  <MotionText text="Hola," delay={40} style={styles.title} />
-
-                  <MotionText
-                    text={firstName}
-                    delay={155}
-                    style={[styles.title, styles.name]}
-                    containerStyle={{ flexShrink: 1 }}
-                    numberOfLines={1}
-                  />
-                </View>
+              <View key={`intro-${statsRevision}`} style={styles.intro}>
+                <MotionView delay={40}>
+                  <Text style={styles.title}>
+                    Hola, <Text style={styles.name}>{firstName}</Text>
+                  </Text>
+                </MotionView>
 
                 <MotionText text="Tu aprendizaje, de un vistazo." delay={270} style={styles.subtitle} />
               </View>
@@ -509,7 +514,7 @@ export default function DashboardScreen() {
                   <View style={styles.metricSeparator} />
 
                   <Metric
-                    label="Promedio"
+                    label="Promedio general"
                     value={overview.progress.average_score_percent}
                     suffix="%"
                     styles={styles}
@@ -541,7 +546,8 @@ export default function DashboardScreen() {
                     </MotionIcon>
                   </View>
 
-                  <StagedScoreChart delayMs={1250} attempts={overview.progress.recent_attempts} isDark={isDark} />
+                  <ScoreChart attempts={overview.progress.recent_attempts} isDark={isDark} />
+
                 </MotionPanel>
               ) : statsLoading ? (<SkeletonBlock isDark={isDark} height={275} radius={23} />) : null}
 
