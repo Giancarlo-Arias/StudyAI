@@ -61,6 +61,7 @@ def get_quiz_for_user(
                     id,
                     position,
                     question_text,
+                    question_translation_es,
                     options
                 FROM quiz_questions
                 WHERE quiz_id = :quiz_id

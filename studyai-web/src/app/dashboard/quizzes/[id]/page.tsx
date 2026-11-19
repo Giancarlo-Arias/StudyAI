@@ -5,13 +5,14 @@ import { DashboardReveal } from "@/components/dashboard/dashboard-reveal";
 
 import Link from "next/link";
 import { redirectExpiredSession } from "@/lib/session-client";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, ViewTransition, startTransition, useEffect, useState } from "react";
-
+import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
 type QuizQuestion = {
   id: string;
   position: number;
   question_text: string;
+  question_translation_es?: string | null;
   options: string[];
 };
 
@@ -328,6 +329,11 @@ function QuizResults({
                 </div>
 
                 <h4 className="mt-4 text-base font-semibold leading-7">{question.question_text}</h4>
+                {question.question_translation_es && (
+                  <p className="mt-2 text-sm leading-6 text-muted">
+                    ({question.question_translation_es})
+                  </p>
+                )}
 
                 <p className="mt-4 text-sm text-muted">
                   Tu respuesta:{" "}
@@ -348,12 +354,17 @@ function QuizResults({
                   )}
 
                 {review?.explanation && (
-                  <div className="mt-5 rounded-xl bg-surface-soft p-4">
-                    <p className="text-xs font-semibold text-primary">Explicación</p>
+                    <div className="mt-5 rounded-xl bg-surface-soft p-4">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                        <DashboardIcon name="spark" className="size-4" />
+                        <span>Explicación de StudyAI</span>
+                      </div>
 
-                    <p className="mt-2 text-sm leading-6">{review.explanation}</p>
-                  </div>
-                )}
+                      <p className="mt-2 text-sm leading-6">
+                        {review.explanation}
+                      </p>
+                    </div>
+                 )}
               </article>
             );
           })}
@@ -387,7 +398,7 @@ function QuizResults({
   );
 }
 
-function QuizSession({ quizId }: { quizId: string }) {
+function QuizSession({ quizId, initialMode }: { quizId: string; initialMode: QuizMode }) {
   const [loadState, setLoadState] = useState<LoadState>({
     status: "loading",
   });
@@ -398,7 +409,7 @@ function QuizSession({ quizId }: { quizId: string }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
   // Nuevo: estado del modo Práctica y cambio de modalidad.
-  const [mode, setMode] = useState<QuizMode>("exam");
+  const [mode, setMode] = useState<QuizMode>(initialMode);
   const [pendingMode, setPendingMode] = useState<QuizMode | null>(null);
 
   const [practiceReviews, setPracticeReviews] = useState<Record<string, PracticeReview>>({});
@@ -880,6 +891,11 @@ function QuizSession({ quizId }: { quizId: string }) {
                           <legend className="text-lg font-semibold leading-8 sm:text-xl">
                             {currentQuestion.question_text}
                           </legend>
+                          {currentQuestion.question_translation_es && (
+                            <p className="mt-2 text-sm leading-6 text-muted">
+                              ({currentQuestion.question_translation_es})
+                            </p>
+                          )}
 
                           <div className="mt-7 space-y-3">
                             {currentQuestion.options.map((option, index) => {
@@ -1169,8 +1185,10 @@ function QuizSession({ quizId }: { quizId: string }) {
 
 function QuizContent() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const initialMode: QuizMode = searchParams.get("mode") === "practice" ? "practice" : "exam";
 
-  return <QuizSession key={id} quizId={id} />;
+  return <QuizSession key={`${id}-${initialMode}`} quizId={id} initialMode={initialMode} />;
 }
 
 export default function QuizPage() {

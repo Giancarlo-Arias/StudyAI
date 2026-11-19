@@ -31,6 +31,7 @@ export type QuizQuestion = {
   id: string;
   position: number;
   question_text: string;
+  question_translation_es?: string | null;
   options: string[];
 };
 
@@ -194,6 +195,11 @@ function isQuizQuestion(value: unknown): value is QuizQuestion {
   return typeof value.id === "string"
     && Number.isInteger(value.position)
     && typeof value.question_text === "string"
+    && (
+      value.question_translation_es === undefined
+      || value.question_translation_es === null
+      || typeof value.question_translation_es === "string"
+    )
     && Array.isArray(value.options)
     && value.options.length === 4
     && value.options.every((option: unknown) => typeof option === "string");

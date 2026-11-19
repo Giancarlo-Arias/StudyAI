@@ -26,6 +26,7 @@ class QuizQuestionPublic(BaseModel):
     id: UUID
     position: int
     question_text: str
+    question_translation_es: str | None = None
     options: list[str]
 
 
@@ -95,7 +96,7 @@ class QuizSubmitResponse(BaseModel):
     answers: list[QuizAttemptAnswerReview]
 
 
-# Nuevo: solicitud para comprobar una respuesta en modo Práctica.
+# Solicitud para comprobar una respuesta en modo Práctica.
 class QuizPracticeCheckRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -103,7 +104,7 @@ class QuizPracticeCheckRequest(BaseModel):
     selected_option: int = Field(strict=True, ge=0, le=3)
 
 
-# Nuevo: resultado de una pregunta sin registrar un intento.
+# Resultado de una pregunta sin registrar un intento.
 class QuizPracticeCheckResponse(BaseModel):
     question_id: UUID
     selected_option: int

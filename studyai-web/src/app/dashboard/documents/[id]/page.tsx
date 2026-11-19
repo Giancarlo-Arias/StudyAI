@@ -1,26 +1,23 @@
 "use client";
+
 import { DashboardBackLink } from "@/components/dashboard/dashboard-navigation";
 import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
-
 import { DashboardReveal } from "@/components/dashboard/dashboard-reveal";
-
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import {
-  Suspense,
-  startTransition,
-  useEffect,
-  useLayoutEffect,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
-
+import { Suspense, startTransition, useEffect, useLayoutEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { StudyDocument } from "@/types/documents";
 import { DocumentDetailSkeleton } from "@/components/dashboard/documents-skeleton";
 import { redirectExpiredSession } from "@/lib/session-client";
 
 const CHUNK_LIMIT = 8;
+
+const GENERATION_MESSAGES = [
+  "Generando preguntas a partir de tu documento...",
+  "La IA continúa trabajando con el contenido del PDF...",
+  "Preparando un cuestionario para que puedas estudiar...",
+  "Seguimos procesando tu solicitud...",
+] as const;
 
 type DocumentChunk = {
   id: string;
@@ -64,46 +61,25 @@ type SavedQuizzesState =
   | { status: "ready"; quizzes: SavedQuiz[] };
 
 function formatFileSize(bytes: number): string {
-  if (bytes >= 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
-
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
 function formatDate(value: string): string {
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Fecha no disponible";
-  }
-
-  return new Intl.DateTimeFormat("es-CR", {
-    dateStyle: "medium",
-  }).format(date);
+  if (Number.isNaN(date.getTime())) return "Fecha no disponible";
+  return new Intl.DateTimeFormat("es-CR", { dateStyle: "medium" }).format(date);
 }
 
 function extractQuizId(value: unknown): string | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return null;
-  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
 
   const data = value as Record<string, unknown>;
 
-  if (typeof data.id === "string") {
-    return data.id;
-  }
+  if (typeof data.id === "string") return data.id;
+  if (typeof data.quiz_id === "string") return data.quiz_id;
 
-  if (typeof data.quiz_id === "string") {
-    return data.quiz_id;
-  }
-
-  if (
-    typeof data.quiz === "object" &&
-    data.quiz !== null &&
-    "id" in data.quiz &&
-    typeof data.quiz.id === "string"
-  ) {
+  if (typeof data.quiz === "object" && data.quiz !== null && "id" in data.quiz && typeof data.quiz.id === "string") {
     return data.quiz.id;
   }
 
@@ -111,9 +87,7 @@ function extractQuizId(value: unknown): string | null {
 }
 
 function isSavedQuiz(value: unknown): value is SavedQuiz {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
 
   const quiz = value as Record<string, unknown>;
 
@@ -130,7 +104,6 @@ function DocumentDetailLayout({ children }: { children: ReactNode }) {
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-12">
       <DashboardBackLink href="/dashboard/documents">Volver a mis documentos</DashboardBackLink>
-
       <div className="mt-8">{children}</div>
     </main>
   );
@@ -138,17 +111,12 @@ function DocumentDetailLayout({ children }: { children: ReactNode }) {
 
 function SavedQuizzesSkeleton() {
   return (
-    <div
-      role="status"
-      aria-label="Cargando cuestionarios guardados"
-      className="grid animate-pulse gap-4 md:grid-cols-2 motion-reduce:animate-none"
-    >
+    <div role="status" aria-label="Cargando cuestionarios guardados" className="grid animate-pulse gap-4 md:grid-cols-2 motion-reduce:animate-none">
       {["quiz-a", "quiz-b"].map((item) => (
         <div key={item} className="rounded-2xl border border-input-border bg-surface p-5">
           <div className="h-3 w-24 rounded-full bg-surface-soft" />
           <div className="mt-5 h-5 w-4/5 rounded-lg bg-surface-soft" />
           <div className="mt-3 h-3 w-1/2 rounded-full bg-surface-soft" />
-
           <div className="mt-6 h-11 w-36 rounded-xl bg-surface-soft" />
         </div>
       ))}
@@ -157,10 +125,7 @@ function SavedQuizzesSkeleton() {
 }
 
 function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshKey: number }) {
-  const [state, setState] = useState<SavedQuizzesState>({
-    status: "loading",
-  });
-
+  const [state, setState] = useState<SavedQuizzesState>({ status: "loading" });
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -185,12 +150,7 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
 
         const payload: unknown = await response.json();
 
-        if (
-          typeof payload !== "object" ||
-          payload === null ||
-          !("quizzes" in payload) ||
-          !Array.isArray(payload.quizzes)
-        ) {
+        if (typeof payload !== "object" || payload === null || !("quizzes" in payload) || !Array.isArray(payload.quizzes)) {
           throw new Error("El servidor devolvió un listado inesperado.");
         }
 
@@ -205,10 +165,7 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
         if (controller.signal.aborted) return;
 
         startTransition(() => {
-          setState({
-            status: "ready",
-            quizzes,
-          });
+          setState({ status: "ready", quizzes });
         });
       } catch (caught) {
         if (controller.signal.aborted) return;
@@ -216,8 +173,7 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
         startTransition(() => {
           setState({
             status: "error",
-            message:
-              caught instanceof Error ? caught.message : "No se pudieron cargar los cuestionarios.",
+            message: caught instanceof Error ? caught.message : "No se pudieron cargar los cuestionarios.",
           });
         });
       }
@@ -231,24 +187,16 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
   }, [documentId, refreshKey, retryKey]);
 
   return (
-    <section
-      id="document-quizzes"
-      aria-labelledby="saved-quizzes-title"
-      className="scroll-mt-28 space-y-5"
-    >
+    <section id="document-quizzes" aria-labelledby="saved-quizzes-title" className="scroll-mt-28 space-y-5">
       <div>
         <p className="text-sm font-medium text-primary">Biblioteca de evaluaciones</p>
 
-        <h2
-          id="saved-quizzes-title"
-          className="mt-2 font-display text-lg font-semibold tracking-tight"
-        >
+        <h2 id="saved-quizzes-title" className="mt-2 font-display text-lg font-semibold tracking-tight">
           Mis cuestionarios
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-muted">
-          Evaluaciones que ya has generado a partir de este PDF. Puedes resolverlas nuevamente sin
-          consumir Gemini.
+          Cuestionarios guardados a partir de este PDF. Puedes utilizarlos en Práctica o Examen sin consumir Gemini nuevamente.
         </p>
       </div>
 
@@ -256,9 +204,7 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
         <SavedQuizzesSkeleton />
       ) : state.status === "error" ? (
         <div className="workspace-panel p-6">
-          <p role="alert" className="text-sm text-muted">
-            {state.message}
-          </p>
+          <p role="alert" className="text-sm text-muted">{state.message}</p>
 
           <button
             type="button"
@@ -274,7 +220,6 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
       ) : state.quizzes.length === 0 ? (
         <div className="workspace-panel px-6 py-8">
           <p className="font-medium">Aún no hay cuestionarios para este documento.</p>
-
           <p className="mt-2 text-sm leading-6 text-muted">
             Puedes crear el primero con el formulario de generación que aparece a continuación.
           </p>
@@ -291,7 +236,6 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
                   <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-foreground">
                     {quiz.question_count} {quiz.question_count === 1 ? "pregunta" : "preguntas"}
                   </span>
-
                   <span className="text-xs text-muted">{formatDate(quiz.created_at)}</span>
                 </div>
 
@@ -300,11 +244,8 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
                 </h3>
               </div>
 
-              <Link
-                href={`/dashboard/quizzes/${encodeURIComponent(quiz.id)}`}
-                className="workspace-action workspace-action-primary w-fit"
-              >
-                Resolver cuestionario
+              <Link href={`/dashboard/quizzes/${encodeURIComponent(quiz.id)}`} className="workspace-action workspace-action-primary w-fit">
+                Abrir cuestionario
                 <span aria-hidden="true">→</span>
               </Link>
             </article>
@@ -315,11 +256,7 @@ function SavedQuizzes({ documentId, refreshKey }: { documentId: string; refreshK
   );
 }
 
-function QuizGenerator({
-  documentId,
-  filename,
-  onGenerated,
-}: {
+function QuizGenerator({ documentId, filename, onGenerated }: {
   documentId: string;
   filename: string;
   onGenerated: () => void;
@@ -327,16 +264,22 @@ function QuizGenerator({
   const defaultTitle = `Cuestionario: ${filename.replace(/\.pdf$/i, "")}`;
 
   const [title, setTitle] = useState(defaultTitle);
-
   const [difficulty, setDifficulty] = useState<QuizDifficulty>("intermedia");
-
   const [questionCount, setQuestionCount] = useState(5);
-
   const [isGenerating, setIsGenerating] = useState(false);
-
+  const [generationMessageIndex, setGenerationMessageIndex] = useState(0);
   const [generatedQuiz, setGeneratedQuiz] = useState<GeneratedQuiz | null>(null);
-
   const [generationError, setGenerationError] = useState("");
+
+  useEffect(() => {
+    if (!isGenerating) return;
+
+    const intervalId = window.setInterval(() => {
+      setGenerationMessageIndex((index) => (index + 1) % GENERATION_MESSAGES.length);
+    }, 4200);
+
+    return () => window.clearInterval(intervalId);
+  }, [isGenerating]);
 
   async function handleGenerateQuiz(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -357,6 +300,7 @@ function QuizGenerator({
       return;
     }
 
+    setGenerationMessageIndex(0);
     setIsGenerating(true);
 
     try {
@@ -406,9 +350,7 @@ function QuizGenerator({
 
       onGenerated();
     } catch (caught) {
-      setGenerationError(
-        caught instanceof Error ? caught.message : "Ocurrió un error al generar el cuestionario.",
-      );
+      setGenerationError(caught instanceof Error ? caught.message : "Ocurrió un error al generar el cuestionario.");
     } finally {
       setIsGenerating(false);
     }
@@ -420,51 +362,39 @@ function QuizGenerator({
         <p className="text-xs font-medium text-accent-foreground">
           Estudio con inteligencia artificial
         </p>
+
         <h2 id="quiz-generator-title" className="mt-2 text-xl font-semibold tracking-tight">
           Generar cuestionario
         </h2>
+
         <p className="mt-2 text-sm leading-6 text-muted">
-          Crea una evaluación a partir del contenido de este documento.
+          Genera preguntas a partir de este documento. Después podrás utilizar el cuestionario en Práctica o Examen.
         </p>
       </div>
+
       <div className="min-w-0 p-5 sm:p-7">
         {generatedQuiz ? (
           <div role="status" className="space-y-5">
             <div className="flex items-start gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="m5 12 4 4L19 6" />
                 </svg>
               </span>
 
               <div className="min-w-0">
                 <h3 className="font-display text-lg font-semibold">Cuestionario generado</h3>
-
                 <p className="mt-2 break-words text-sm text-muted">{generatedQuiz.title}</p>
-
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  Tu evaluación se ha creado correctamente y está disponible para resolverla.
+                  Tu cuestionario se guardó correctamente. Puedes abrirlo y elegir Práctica o Examen.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
               {generatedQuiz.id ? (
-                <Link
-                  href={`/dashboard/quizzes/${encodeURIComponent(generatedQuiz.id)}`}
-                  className="workspace-action workspace-action-primary"
-                >
-                  Resolver ahora
+                <Link href={`/dashboard/quizzes/${encodeURIComponent(generatedQuiz.id)}`} className="workspace-action workspace-action-primary">
+                  Abrir cuestionario
                   <span aria-hidden="true">→</span>
                 </Link>
               ) : (
@@ -489,16 +419,13 @@ function QuizGenerator({
             </div>
           </div>
         ) : (
-          <form
-            onSubmit={handleGenerateQuiz}
-            aria-label="Configuración del cuestionario"
-            className="space-y-6"
-          >
+          <form onSubmit={handleGenerateQuiz} aria-label="Configuración del cuestionario" className="space-y-6">
             <div className="min-w-0">
               <div className="flex items-center justify-between gap-3">
                 <label htmlFor="quiz-title" className="block text-sm font-semibold">
                   Título del cuestionario
                 </label>
+
                 <span className="text-xs tabular-nums text-muted" aria-hidden="true">
                   {title.length}/120
                 </span>
@@ -520,26 +447,22 @@ function QuizGenerator({
                 aria-describedby="quiz-title-hint"
                 className="workspace-field quiz-config-input mt-2"
               />
+
               <p id="quiz-title-hint" className="mt-2 text-sm text-muted">
                 Así aparecerá en tus cuestionarios.
               </p>
             </div>
 
             <div className="grid items-start gap-6 sm:grid-cols-2">
-              <fieldset
-                disabled={isGenerating}
-                className="min-w-0"
-                aria-describedby="quiz-difficulty-hint"
-              >
+              <fieldset disabled={isGenerating} className="min-w-0" aria-describedby="quiz-difficulty-hint">
                 <legend className="text-sm font-medium">Dificultad</legend>
+
                 <div className="quiz-difficulty-segments mt-2">
-                  {(
-                    [
-                      { value: "facil", label: "Fácil", icon: "levelEasy" },
-                      { value: "intermedia", label: "Intermedia", icon: "levelMedium" },
-                      { value: "dificil", label: "Difícil", icon: "levelHard" },
-                    ] as const
-                  ).map((option) => (
+                  {([
+                    { value: "facil", label: "Fácil", icon: "levelEasy" },
+                    { value: "intermedia", label: "Intermedia", icon: "levelMedium" },
+                    { value: "dificil", label: "Difícil", icon: "levelHard" },
+                  ] as const).map((option) => (
                     <label key={option.value} className="quiz-difficulty-segment">
                       <input
                         type="radio"
@@ -549,14 +472,13 @@ function QuizGenerator({
                         onChange={() => setDifficulty(option.value)}
                         className="sr-only"
                       />
-                      <DashboardIcon
-                        name={option.icon}
-                        className="quiz-difficulty-icon size-4 shrink-0"
-                      />
+
+                      <DashboardIcon name={option.icon} className="quiz-difficulty-icon size-4 shrink-0" />
                       <span>{option.label}</span>
                     </label>
                   ))}
                 </div>
+
                 <p id="quiz-difficulty-hint" className="mt-2 text-sm leading-5 text-muted">
                   {difficulty === "facil"
                     ? "Repasa los conceptos esenciales."
@@ -580,6 +502,7 @@ function QuizGenerator({
                   >
                     <span aria-hidden="true">−</span>
                   </button>
+
                   <input
                     id="quiz-question-count"
                     name="question_count"
@@ -594,6 +517,7 @@ function QuizGenerator({
                     aria-describedby="quiz-question-hint"
                     className="quiz-question-input"
                   />
+
                   <button
                     type="button"
                     aria-label="Aumentar cantidad de preguntas"
@@ -603,6 +527,7 @@ function QuizGenerator({
                     <span aria-hidden="true">+</span>
                   </button>
                 </div>
+
                 <p id="quiz-question-hint" className="mt-2 text-sm text-muted">
                   Entre 1 y 20 preguntas.
                 </p>
@@ -624,25 +549,12 @@ function QuizGenerator({
               >
                 {isGenerating ? (
                   <>
-                    <span
-                      aria-hidden="true"
-                      className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
-                    />
+                    <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
                     Generando...
                   </>
                 ) : (
                   <>
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z" />
                       <path d="M19 17v4M17 19h4" />
                     </svg>
@@ -653,17 +565,27 @@ function QuizGenerator({
             </div>
 
             {isGenerating && (
-              <p role="status" className="text-sm text-muted">
-                StudyAI está preparando las preguntas. No cierres esta página mientras se procesa la
-                solicitud.
-              </p>
+              <div role="status" aria-live="polite" aria-atomic="true" className="flex items-start gap-3 rounded-2xl border border-border bg-surface-soft p-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden="true">
+                  <DashboardIcon name="spark" className="size-5 animate-pulse motion-reduce:animate-none" />
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">StudyAI está generando tu cuestionario</p>
+                  <p key={generationMessageIndex} className="mt-1 animate-pulse text-sm leading-6 text-muted motion-reduce:animate-none">
+                    {GENERATION_MESSAGES[generationMessageIndex]}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-muted">
+                    Mantén la página abierta. Estos mensajes son informativos, no porcentajes ni etapas reales.
+                  </p>
+                </div>
+
+                <span className="mt-1 size-4 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary motion-reduce:animate-none" aria-hidden="true" />
+              </div>
             )}
 
             {generationError && (
-              <p
-                role="alert"
-                className="rounded-xl border border-red-500/25 bg-red-500/5 px-4 py-3 text-sm text-red-500"
-              >
+              <p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/5 px-4 py-3 text-sm text-red-500">
                 {generationError}
               </p>
             )}
@@ -680,22 +602,15 @@ function DocumentQuizzes({ documentId, filename }: { documentId: string; filenam
   return (
     <div className="space-y-8">
       <SavedQuizzes documentId={documentId} refreshKey={refreshKey} />
-
-      <QuizGenerator
-        documentId={documentId}
-        filename={filename}
-        onGenerated={() => setRefreshKey((value) => value + 1)}
-      />
+      <QuizGenerator documentId={documentId} filename={filename} onGenerated={() => setRefreshKey((value) => value + 1)} />
     </div>
   );
 }
 
 function DocumentDetailContent() {
   const { id } = useParams<{ id: string }>();
-
   const [offset, setOffset] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
-
   const [requestState, setRequestState] = useState<RequestState | null>(null);
 
   const requestKey = `${id}:${offset}:${reloadKey}`;
@@ -745,11 +660,7 @@ function DocumentDetailContent() {
           if (controller.signal.aborted) return;
 
           startTransition(() => {
-            setRequestState({
-              key: requestKey,
-              data,
-              error: "",
-            });
+            setRequestState({ key: requestKey, data, error: "" });
           });
         };
 
@@ -775,17 +686,13 @@ function DocumentDetailContent() {
   }, [id, offset, reloadKey, requestKey]);
 
   const isLoading = requestState?.key !== requestKey;
-
   const data = !isLoading ? requestState?.data : null;
-
   const error = !isLoading ? requestState?.error : "";
-
   const document = data?.document;
   const chunks = data?.chunks ?? [];
   const totalChunks = data?.chunk_count ?? 0;
 
   const currentPage = Math.floor(offset / CHUNK_LIMIT) + 1;
-
   const totalPages = Math.max(1, Math.ceil(totalChunks / CHUNK_LIMIT));
 
   return (
@@ -796,10 +703,7 @@ function DocumentDetailContent() {
         ) : error ? (
           <section className="workspace-panel p-6 sm:p-8">
             <h1 className="font-display text-xl font-semibold">No se pudo cargar el documento</h1>
-
-            <p role="alert" className="mt-3 text-sm text-muted">
-              {error}
-            </p>
+            <p role="alert" className="mt-3 text-sm text-muted">{error}</p>
 
             <button
               type="button"
@@ -821,47 +725,26 @@ function DocumentDetailContent() {
               <p className="mt-3 text-sm text-muted">Subido el {formatDate(document.created_at)}</p>
             </header>
 
-            <section
-              aria-label="Información del documento"
-              className="grid grid-cols-2 gap-3 xl:grid-cols-4"
-            >
+            <section aria-label="Información del documento" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               {[
-                {
-                  label: "Tamaño",
-                  value: formatFileSize(document.size_bytes),
-                },
-                {
-                  label: "Páginas con texto",
-                  value: String(document.pages_with_text),
-                },
-                {
-                  label: "Caracteres extraídos",
-                  value: document.text_length.toLocaleString("es-CR"),
-                },
-                {
-                  label: "Fragmentos",
-                  value: String(totalChunks),
-                },
+                { label: "Tamaño", value: formatFileSize(document.size_bytes) },
+                { label: "Páginas con texto", value: String(document.pages_with_text) },
+                { label: "Caracteres extraídos", value: document.text_length.toLocaleString("es-CR") },
+                { label: "Fragmentos", value: String(totalChunks) },
               ].map((stat) => (
                 <div key={stat.label} className="workspace-panel !rounded-2xl px-4 py-3.5">
                   <p className="text-sm text-muted">{stat.label}</p>
-
                   <p className="mt-2 text-xl font-semibold tabular-nums">{stat.value}</p>
                 </div>
               ))}
             </section>
 
-            <DocumentQuizzes
-              key={document.id}
-              documentId={document.id}
-              filename={document.filename}
-            />
+            <DocumentQuizzes key={document.id} documentId={document.id} filename={document.filename} />
 
             <section>
               <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <h2 className="font-display text-lg font-semibold">Contenido extraído</h2>
-
                   <p className="mt-2 text-sm text-muted">
                     Fragmentos de texto almacenados y procesados por StudyAI.
                   </p>
@@ -899,10 +782,7 @@ function DocumentDetailContent() {
               )}
 
               {totalChunks > CHUNK_LIMIT && (
-                <nav
-                  aria-label="Paginación de fragmentos"
-                  className="mt-6 flex items-center justify-between gap-4"
-                >
+                <nav aria-label="Paginación de fragmentos" className="mt-6 flex items-center justify-between gap-4">
                   <button
                     type="button"
                     disabled={offset === 0}
@@ -912,9 +792,7 @@ function DocumentDetailContent() {
                     Anterior
                   </button>
 
-                  <span className="text-sm text-muted">
-                    {currentPage} / {totalPages}
-                  </span>
+                  <span className="text-sm text-muted">{currentPage} / {totalPages}</span>
 
                   <button
                     type="button"

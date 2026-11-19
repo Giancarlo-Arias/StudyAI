@@ -57,6 +57,12 @@ function QuestionCard({ question, number, selected, disabled, review, colors, op
         {question.question_text}
       </Text>
 
+      {question.question_translation_es ? (
+        <Text style={[styles.questionTranslation, { color: colors.secondary }]}>
+          ({question.question_translation_es})
+        </Text>
+      ) : null}
+
       <Text style={[styles.optionHint, { color: colors.secondary }]}>
         {review ? "Respuesta comprobada" : "Selecciona una respuesta"}
       </Text>
@@ -306,6 +312,12 @@ function QuizResults({ quiz, answers, result, colors, actionForeground, onRetry,
               {question.question_text}
             </Text>
 
+            {question.question_translation_es ? (
+              <Text style={[styles.questionTranslation, { color: colors.secondary }]}>
+                ({question.question_translation_es})
+              </Text>
+            ) : null}
+
             <Text style={[styles.reviewLabel, { color: colors.secondary }]}>Tu respuesta</Text>
             <Text style={[styles.reviewAnswer, { color: colors.text }]}>
               {question.options[selected] ?? "No disponible"}
@@ -325,9 +337,10 @@ function QuizResults({ quiz, answers, result, colors, actionForeground, onRetry,
 
             {review?.explanation ? (
               <View style={[styles.explanation, { backgroundColor: colors.softAccent }]}>
-                <Text style={[styles.explanationTitle, { color: colors.accent }]}>
-                  Explicación
-                </Text>
+                <View style={styles.explanationHeading}>
+                  <Sparkles size={15} color={colors.accent} />
+                  <Text style={[styles.explanationTitle, { color: colors.accent }]}>Explicación de StudyAI</Text>
+                </View>
 
                 <Text style={[styles.explanationText, { color: colors.text }]}>
                   {review.explanation}
@@ -866,6 +879,7 @@ const styles = StyleSheet.create({
   questionPill: { borderRadius: 9, paddingVertical: 7, paddingHorizontal: 10 },
   questionPillText: { ...typography, fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
   questionText: { ...typography, fontSize: 21, fontWeight: "800", lineHeight: 29, letterSpacing: -0.5 },
+  questionTranslation: { ...typography, fontSize: 12, lineHeight: 19, fontWeight: "400" },
   optionHint: { ...typography, fontSize: 11, marginTop: 3 },
   options: { gap: 11 },
   option: { minHeight: 65, borderWidth: 1, borderRadius: 15, paddingVertical: 12, paddingHorizontal: 13, gap: 12, flexDirection: "row", alignItems: "center" },
@@ -911,6 +925,7 @@ const styles = StyleSheet.create({
   reviewLabel: { ...typography, fontSize: 11, marginTop: 3 },
   reviewAnswer: { ...typography, fontSize: 12, lineHeight: 19, fontWeight: "600" },
   explanation: { borderRadius: 14, padding: 14, gap: 7, marginTop: 6 },
+  explanationHeading: { flexDirection: "row", alignItems: "center", gap: 7 },
   explanationTitle: { ...typography, fontSize: 11, fontWeight: "800" },
   explanationText: { ...typography, fontSize: 12, lineHeight: 19 },
   practiceFeedback: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 10 },

@@ -131,7 +131,22 @@ DIFICULTAD:
 {DIFFICULTIES[difficulty]}
 
 REGLAS:
-- Escribe las preguntas, opciones y explicaciones en español.
+- Identifica el idioma predominante del contenido proporcionado.
+- Genera question_text, options y explanation en ese mismo idioma.
+- Si el documento está principalmente en inglés, utiliza inglés.
+- Si está principalmente en español, utiliza español.
+- En documentos bilingües, utiliza el idioma predominante.
+- Conserva los términos técnicos en su idioma original cuando corresponda.
+- No mezcles idiomas innecesariamente dentro de una pregunta.
+- Cuando question_text esté en inglés, genera también
+  question_translation_es con una traducción natural al español.
+- Traduce únicamente el enunciado de la pregunta.
+- Conserva los phrasal verbs y otros términos cuyo significado
+  se esté evaluando, para no revelar la respuesta.
+- No agregues pistas ni la respuesta correcta en la traducción.
+- Cuando la pregunta esté en español, usa null en
+  question_translation_es.
+- No traduzcas las opciones ni las explicaciones.
 - Cada pregunta debe evaluar un concepto relevante del documento.
 - Evita preguntas repetidas o demasiado similares.
 - Formula preguntas claras, específicas y sin ambigüedades.
@@ -194,7 +209,8 @@ Antes de devolver el JSON:
 FORMATO:
 Devuelve exclusivamente el JSON definido por el esquema.
 Cada pregunta debe contener:
-question_text, options, correct_answer, explanation y chunk_id.
+question_text, question_translation_es, options,
+correct_answer, explanation y chunk_id.
 
 No incluyas correct_option en el JSON.
 

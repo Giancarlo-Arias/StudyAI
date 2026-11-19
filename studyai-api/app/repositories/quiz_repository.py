@@ -76,6 +76,7 @@ def save_generated_quiz_for_user(
                         chunk_id,
                         position,
                         question_text,
+                        question_translation_es,
                         options,
                         correct_option,
                         explanation
@@ -85,6 +86,7 @@ def save_generated_quiz_for_user(
                         dc.id,
                         :position,
                         :question_text,
+                        :question_translation_es,
                         CAST(:options AS JSONB),
                         :correct_option,
                         :explanation
@@ -99,6 +101,9 @@ def save_generated_quiz_for_user(
                     "chunk_id": question.chunk_id,
                     "position": position,
                     "question_text": question.question_text,
+                    "question_translation_es": (
+                        question.question_translation_es
+                    ),
                     "options": json.dumps(
                         question.options,
                         ensure_ascii=False,

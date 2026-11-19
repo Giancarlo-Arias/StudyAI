@@ -7,6 +7,7 @@ class QuizQuestionBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question_text: str = Field(min_length=1, max_length=1000)
+    question_translation_es: str | None = Field(default=None, max_length=1000,)
     options: list[str] = Field(min_length=4, max_length=4)
     explanation: str = Field(min_length=1, max_length=2000)
     chunk_id: UUID
@@ -20,6 +21,14 @@ class QuizQuestionBase(BaseModel):
             raise ValueError("El texto no puede estar vacío")
 
         return value
+
+    @field_validator("question_translation_es")
+    @classmethod
+    def validate_translation(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        return value.strip() or None
 
     @field_validator("options")
     @classmethod

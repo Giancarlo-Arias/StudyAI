@@ -4,8 +4,8 @@ import { goBack } from "@/lib/navigation";
 import { LinearGradient } from "@/components/theme-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, BookOpen, Check, CheckCircle2, ChevronRight, ClipboardCheck, FileText, Sparkles } from "lucide-react-native";
-import { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, useColorScheme } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Easing, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionIcon, MotionPanel, MotionText } from "@/components/dashboard/dashboard-motion";
@@ -19,6 +19,62 @@ const DIFFICULTIES: { value: QuizDifficulty; label: string; description: string 
 ];
 
 const QUESTION_COUNTS = [5, 10, 15, 20] as const;
+
+const GENERATION_MESSAGES = [
+  "Generando preguntas a partir de tu documento...",
+  "La IA continúa trabajando con el contenido del PDF...",
+  "Preparando un cuestionario para que puedas estudiar...",
+  "Seguimos procesando tu solicitud...",
+] as const;
+
+function GenerationStatus({ colors }: { colors: ReturnType<typeof getDashboardPalette> }) {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [pulse] = useState(() => new Animated.Value(0));
+  const [fade] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    const pulseAnimation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+
+    pulseAnimation.start();
+
+    const intervalId = setInterval(() => {
+      Animated.timing(fade, { toValue: 0, duration: 200, useNativeDriver: true }).start(({ finished }) => {
+        if (!finished) return;
+        setMessageIndex((index) => (index + 1) % GENERATION_MESSAGES.length);
+        Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 4200);
+
+    return () => {
+      clearInterval(intervalId);
+      pulseAnimation.stop();
+      fade.stopAnimation();
+    };
+  }, [fade, pulse]);
+
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.09] });
+
+  return (
+    <View style={[styles.generationCard, { backgroundColor: colors.surface, borderColor: colors.outline }]} accessibilityLiveRegion="polite">
+      <Animated.View style={[styles.generationIcon, { backgroundColor: colors.softAccent, transform: [{ scale }] }]}>
+        <Sparkles size={23} color={colors.accent} />
+      </Animated.View>
+
+      <View style={styles.generationCopy}>
+        <Text style={[styles.generationTitle, { color: colors.text }]}>StudyAI está generando tu cuestionario</Text>
+        <Animated.View style={[styles.generationMessage, { opacity: fade }]}>
+          <Text style={[styles.generationDescription, { color: colors.secondary }]}>{GENERATION_MESSAGES[messageIndex]}</Text>
+        </Animated.View>
+        <Text style={[styles.generationNote, { color: colors.secondary }]}>Mantén esta pantalla abierta.</Text>
+      </View>
+
+      <ActivityIndicator size="small" color={colors.accent} style={styles.generationSpinner} />
+    </View>
+  );
+}
 
 export default function CreateQuizScreen() {
   const router = useRouter();
@@ -227,11 +283,7 @@ export default function CreateQuizScreen() {
                 {!generating && <ChevronRight size={19} color={buttonTextColor} />}
               </Pressable>
 
-              {generating && (
-                <Text style={[styles.generatingHint, { color: colors.secondary }]}>
-                  Gemini está creando las preguntas a partir del documento. Mantén esta pantalla abierta.
-                </Text>
-              )}
+              {generating && <GenerationStatus colors={colors} />}
             </>
           ) : (
             <MotionPanel
@@ -366,7 +418,14 @@ const styles = StyleSheet.create({
   errorText: { ...typography, fontSize: 12, lineHeight: 19 },
   primaryButton: { minHeight: 54, paddingHorizontal: 18, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 11 },
   primaryButtonText: { ...typography, fontSize: 14, fontWeight: "800" },
-  generatingHint: { ...typography, marginTop: -12, fontSize: 12, lineHeight: 19, textAlign: "center" },
+  generationCard: { borderWidth: 1, borderRadius: 19, padding: 15, flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  generationIcon: { width: 43, height: 43, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  generationCopy: { flex: 1, minWidth: 0, gap: 5 },
+  generationTitle: { ...typography, fontSize: 13, fontWeight: "800", lineHeight: 19 },
+  generationMessage: { minHeight: 36, justifyContent: "center" },
+  generationDescription: { ...typography, fontSize: 12, lineHeight: 18 },
+  generationNote: { ...typography, fontSize: 11, lineHeight: 16 },
+  generationSpinner: { marginTop: 11 },
   successCard: { borderRadius: 22, borderWidth: 1, padding: 18 },
   successContent: { gap: 17 },
   successIcon: { width: 58, height: 58, borderRadius: 18, alignItems: "center", justifyContent: "center" },
