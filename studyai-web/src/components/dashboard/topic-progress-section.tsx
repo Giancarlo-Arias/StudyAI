@@ -1,7 +1,9 @@
 
 "use client";
 
-import type { TopicProgress } from "@/types/dashboard";
+import type { TopicProgress } from "@/types/topic-progress";
+import Link from "next/link";
+import { DashboardReveal } from "./dashboard-reveal";
 
 const statusLabels: Record<TopicProgress["status"], string> = {
   insufficient_data: "Datos insuficientes",
@@ -11,7 +13,7 @@ const statusLabels: Record<TopicProgress["status"], string> = {
 };
 
 const percentFormatter = new Intl.NumberFormat("es-CR", {
-  maximumFractionDigits: 1,
+  maximumFractionDigits: 2,
 });
 
 function getAccuracy(topic: TopicProgress): number | null {
@@ -22,10 +24,12 @@ function getAccuracy(topic: TopicProgress): number | null {
   return Math.min(100, Math.max(0, topic.accuracy_percent));
 }
 
-export function TopicProgressSection({ topics }: { topics: TopicProgress[] }) {
+export function TopicProgressSection({ topics }: { topics: TopicProgress[] | null }) {
   return (
+    <DashboardReveal className="mt-5" containerEntrance>
     <section
-      className="workspace-panel mt-5 overflow-hidden"
+      data-reveal="container"
+      className="workspace-panel overflow-hidden"
       aria-labelledby="topic-progress-title"
     >
       <div className="workspace-panel-heading border-b border-border">
@@ -34,18 +38,22 @@ export function TopicProgressSection({ topics }: { topics: TopicProgress[] }) {
             Rendimiento por tema
           </h3>
           <p className="mt-1 text-xs leading-5 text-muted">
-            Identifica los temas que dominas y los que necesitas reforzar.
+            Basado en tu respuesta más reciente a cada pregunta evaluada.
           </p>
         </div>
 
-        {topics.length > 0 && (
+        {topics && topics.length > 0 && (
           <span className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium tabular-nums text-muted">
             {topics.length} {topics.length === 1 ? "tema" : "temas"}
           </span>
         )}
       </div>
 
-      {topics.length === 0 ? (
+      {topics === null ? (
+        <div role="status" className="px-5 py-8 text-sm text-muted sm:px-6">
+          No se pudo cargar el rendimiento por tema. Recarga la página para intentarlo de nuevo.
+        </div>
+      ) : topics.length === 0 ? (
         <div className="px-5 py-8 sm:px-6">
           <p className="text-sm font-medium">Aún no hay resultados por tema</p>
           <p className="mt-2 max-w-lg text-sm leading-6 text-muted">
@@ -68,13 +76,13 @@ export function TopicProgressSection({ topics }: { topics: TopicProgress[] }) {
                     <h4 className="break-words text-sm font-semibold leading-6">
                       {topic.topic}
                     </h4>
-                    <p className="mt-0.5 break-words text-xs leading-5 text-muted">
+                    <Link href={`/dashboard/documents/${encodeURIComponent(topic.document_id)}`} className="mt-0.5 block break-words text-xs leading-5 text-muted underline-offset-4 hover:text-accent-foreground hover:underline">
                       {topic.filename}
-                    </p>
+                    </Link>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-3">
-                    <span className="rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted">
+                    <span data-status={topic.status} className="topic-status rounded-full border px-2.5 py-1 text-xs font-medium">
                       {statusLabels[topic.status]}
                     </span>
                     <span className="min-w-12 text-right text-sm font-semibold tabular-nums">
@@ -113,5 +121,6 @@ export function TopicProgressSection({ topics }: { topics: TopicProgress[] }) {
         </ul>
       )}
     </section>
+    </DashboardReveal>
   );
 }

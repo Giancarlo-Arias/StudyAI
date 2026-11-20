@@ -221,7 +221,7 @@ export function DashboardReveal({
       return element.animate(
         [
           {
-            opacity: 0,
+            opacity: isContainer ? 1 : 0,
             transform: isContainer
               ? "scale(0.45)"
               : element.dataset.reveal === "fade"

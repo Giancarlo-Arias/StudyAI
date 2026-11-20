@@ -34,7 +34,7 @@ function subscribeMotion(callback: () => void) {
 export function LoginFeatures() {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const playingBeforePointer = useRef<boolean | null>(null);
+  const playingBeforePointerRef = useRef<boolean | null>(null);
   const [interacting, setInteracting] = useState(false);
   const reducedMotion = useSyncExternalStore(
     subscribeMotion,
@@ -151,11 +151,11 @@ export function LoginFeatures() {
       <div className="login-feature-controls mt-5">
         <button
           type="button"
-          onPointerDown={() => { playingBeforePointer.current = playing; }}
-          onPointerCancel={() => { playingBeforePointer.current = null; }}
+          onPointerDown={() => { playingBeforePointerRef.current = playing; }}
+          onPointerCancel={() => { playingBeforePointerRef.current = null; }}
           onClick={() => {
-            const previous = playingBeforePointer.current;
-            playingBeforePointer.current = null;
+            const previous = playingBeforePointerRef.current;
+            playingBeforePointerRef.current = null;
             setPlaying((value) => !(previous ?? value));
           }}
           className="login-feature-play"

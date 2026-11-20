@@ -4,9 +4,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
-  addTransitionType,
   Fragment,
-  startTransition,
   useState,
   useSyncExternalStore,
   ViewTransition,
@@ -140,9 +138,11 @@ function formatDate(value: string | null) {
 
 export function DashboardOverview({
   dashboard,
+  topicSection,
   fullName,
 }: {
   dashboard: DashboardResponse;
+  topicSection: ReactNode;
   fullName: string;
 }) {
   const [view, setView] = useState<"summary" | "charts">("charts");
@@ -232,6 +232,13 @@ export function DashboardOverview({
       icon: "chart",
     },
     {
+      label: "Promedio general",
+      value: formatScore(progress.average_score_percent),
+      rawValue: progress.average_score_percent,
+      format: formatScore,
+      icon: "target",
+    },
+    {
       label: "Cuestionarios",
       value: formatCount(progress.total_quizzes),
       rawValue: progress.total_quizzes,
@@ -276,16 +283,11 @@ export function DashboardOverview({
             data-reveal="container"
             className="workspace-panel workspace-glass workspace-metric"
           >
-            <div className="workspace-metric-label">
-              <h2 data-reveal-content="" title={metric.label}>
-                {metric.label}
-              </h2>
-              <span data-reveal-content="" className="workspace-metric-icon">
-                <DashboardIcon
-                  name={metric.icon}
-                  className="size-3.5"
-                />
+            <div data-reveal-content="" className="workspace-metric-heading">
+              <span className="workspace-metric-icon">
+                <DashboardIcon name={metric.icon} className="size-3.5" />
               </span>
+              <h2 className="workspace-metric-label">{metric.label}</h2>
             </div>
             <p
               data-reveal-content=""
@@ -340,18 +342,7 @@ export function DashboardOverview({
                 className="workspace-segment-button"
                 aria-pressed={view === option.id}
                 aria-controls="dashboard-study-content"
-                onClick={(event) => {
-                  if (view === option.id) return;
-
-                  if (event.detail === 0) {
-                    setView(option.id);
-                  } else {
-                    startTransition(() => {
-                      addTransitionType("dashboard-display");
-                      setView(option.id);
-                    });
-                  }
-                }}
+                onClick={() => setView(option.id)}
               >
                 {view === option.id && (
                   <span
@@ -577,6 +568,7 @@ export function DashboardOverview({
             )}
           </div>
         </ViewTransition>
+        {topicSection}
       </>
     ),
 

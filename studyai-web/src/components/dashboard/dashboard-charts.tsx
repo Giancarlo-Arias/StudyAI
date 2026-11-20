@@ -108,13 +108,11 @@ function ResultTooltip({
   if (!active || !point) return null;
   return (
     <div className="workspace-chart-tooltip">
-      <p className="text-[10px] text-muted">{date(point.date, true)}</p>
-      <p className="mt-1.5 max-w-52 break-words text-xs font-medium">{point.title}</p>
-      <div className="mt-3 flex items-baseline justify-between gap-5">
-        <strong className="text-2xl font-semibold tracking-tight tabular-nums">
-          {score(point.score)}
-        </strong>
-        <span className="text-[10px] text-muted">
+      <p className="workspace-chart-tooltip-date">{date(point.date, true)}</p>
+      <p className="workspace-chart-tooltip-title">{point.title}</p>
+      <div className="workspace-chart-tooltip-result">
+        <strong>{score(point.score)}</strong>
+        <span>
           {point.correct}/{point.total} correctas
         </span>
       </div>
@@ -268,11 +266,14 @@ export function DashboardCharts({
                       )}
                       <Tooltip
                         content={(props) => <ResultTooltip {...props} />}
+                        isAnimationActive={!reducedMotion}
+                        animationDuration={120}
+                        animationEasing="ease-out"
                         cursor={{
                           stroke: "var(--chart-primary)",
                           strokeWidth: 1,
                           strokeDasharray: "3 4",
-                          strokeOpacity: 0.5,
+                          strokeOpacity: 0.35,
                         }}
                       />
                       {ready && (
@@ -401,7 +402,7 @@ export function DashboardCharts({
                 <span>completado</span>
               </div>
             </div>
-            <div className="mx-5 grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
+            <div className="mx-5 grid grid-cols-2 gap-4 border-t border-border/50 pt-4 pb-5">
               <div>
                 <p className="flex items-center gap-1.5 text-xs text-muted">
                   <span className="size-1.5 rounded-full bg-[var(--chart-primary)]" />
@@ -416,15 +417,6 @@ export function DashboardCharts({
                 </p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">{pending}</p>
               </div>
-            </div>
-            <div className="px-5 pt-3 pb-4">
-              <Link
-                href={progress.total_quizzes > 0 ? "/dashboard/quizzes" : "/dashboard/documents"}
-                className="workspace-action workspace-action-primary workspace-study-action w-full"
-              >
-                Continuar estudiando
-                <DashboardIcon name="arrow" className="size-3.5" />
-              </Link>
             </div>
           </section>
         </div>

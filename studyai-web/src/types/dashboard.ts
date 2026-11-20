@@ -39,21 +39,6 @@ export interface DashboardAchievement {
   unlocked_at: string | null;
 }
 
-export interface TopicProgress {
-  document_id: string;
-  filename: string;
-  topic: string;
-  questions_evaluated: number;
-  correct_questions: number;
-  incorrect_questions: number;
-  accuracy_percent: number | null;
-  status: "insufficient_data" | "reinforce" | "review" | "strong";
-}
-
-export interface TopicProgressResponse {
-  topics: TopicProgress[];
-}
-
 export interface DashboardResponse {
   progress: DashboardProgress;
   documents: DashboardDocument[];

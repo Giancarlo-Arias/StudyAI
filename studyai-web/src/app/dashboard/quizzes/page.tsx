@@ -145,7 +145,7 @@ function QuizzesContent({ quizzes }: { quizzes: Quiz[] }) {
                 <div className="flex flex-wrap gap-3 border-t border-input-border pt-5">
                   <Link
                     href={`/dashboard/quizzes/${encodeURIComponent(quiz.id)}`}
-                    className="workspace-action workspace-action-primary"
+                    className="workspace-action workspace-quiz-action"
                   >
                     Resolver
                     <DashboardIcon name="arrow" className="size-3.5" />

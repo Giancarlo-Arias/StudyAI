@@ -4,7 +4,7 @@
   background: var(--background);
 }
 .navigation-glass {
-  --navigation-tint: light-dark(#f8faff80, #19213994);
+  --navigation-tint: light-dark(#f8faff80, #202024d9);
   isolation: isolate;
   border: 1px solid light-dark(#ffffffdd, #c3d6ff38);
   background:
@@ -23,7 +23,7 @@
   backdrop-filter: blur(22px) saturate(160%);
 }
 .navigation-glass--sidebar {
-  --navigation-tint: light-dark(#f4f7ff80, #151e359e);
+  --navigation-tint: light-dark(#f4f7ff80, #1c1c20e0);
   box-shadow:
     inset 0 1px 0 light-dark(#ffffff, #eef3ff33),
     inset 1px 0 0 light-dark(#ffffff73, #e5eeff0d),
@@ -92,7 +92,7 @@
 }
 .login-glass {
   border: 1px solid light-dark(#ffffffea, #c6d3ff28);
-  background: light-dark(#ffffffe0, #202940e6);
+  background: light-dark(#ffffffe0, #222227e6);
   box-shadow:
     inset 0 1px 0 light-dark(#ffffff, #d3dfff12),
     0 22px 60px -30px light-dark(#3c4a7c30, #00000070);
@@ -109,7 +109,7 @@
   height: 36px;
   align-items: center;
   justify-content: center;
-  border: 1px solid light-dark(#ffffff, #c5bbff50);
+  border: 1px solid light-dark(#ffffff, #9ecfe150);
   border-radius: 11px;
   background: linear-gradient(145deg, #8a77ec, #6252c9);
   color: white;
@@ -270,7 +270,7 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid light-dark(#ffffff, #cabfff26);
+  border: 1px solid light-dark(#ffffff, #a6d4e026);
   border-radius: 10px;
   background: var(--accent-soft);
   color: var(--accent-foreground);
@@ -300,7 +300,7 @@
 .login-practice-icon {
   height: 34px;
   border-radius: 10px;
-  background: light-dark(#ffffff8a, #c5b4ff12);
+  background: light-dark(#ffffff8a, #96cbde12);
 }
 @media (prefers-reduced-motion: no-preference) {
   [data-login-step] {
@@ -396,7 +396,7 @@
   }
 
   :root.theme-view-transition::view-transition-image-pair(root) {
-    isolation: auto;
+    isolation: isolate;
   }
   :root.theme-view-transition::view-transition-old(root),
   :root.theme-view-transition::view-transition-new(root) {

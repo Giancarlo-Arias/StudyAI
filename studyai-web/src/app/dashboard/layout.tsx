@@ -12,7 +12,6 @@ import {
 import { DashboardIcon } from "@/components/dashboard/dashboard-icon";
 import { DashboardLoading } from "@/components/dashboard/dashboard-loading";
 import { DashboardMotionScope } from "@/components/dashboard/dashboard-reveal";
-import { DashboardSilk } from "@/components/dashboard/dashboard-silk";
 
 import "../login/login.css";
 import "./dashboard.css";
@@ -32,7 +31,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <ViewTransition default="none" enter="dashboard-enter">
       <div className="dashboard-shell">
-        <DashboardSilk />
+        <div className="workspace-silk" aria-hidden="true" />
         <a href="#workspace-content" className="workspace-skip">
           Ir al contenido
         </a>

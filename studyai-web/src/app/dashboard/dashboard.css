@@ -1,13 +1,13 @@
 .dashboard-shell {
   --workspace-max-width: max(1480px, calc(100cqw - 64px));
   --workspace-gutter: clamp(28px, calc(1.875vw - 8px), 64px);
-  --workspace-glass: light-dark(#ffffffa8, #1d2544b8);
+  --workspace-glass: light-dark(#ffffffc7, #26262bdb);
   --workspace-shine: light-dark(#ffffff, #e0e8ff22);
-  --workspace-edge: light-dark(#ffffffd9, #c5d3ff24);
-  --workspace-shadow: light-dark(#364a8f18, #00000050);
-  --chart-primary: light-dark(#7760d6, #a793ff);
-  --chart-secondary: light-dark(#247d92, #6acbd0);
-  --chart-grid: light-dark(#dbe0ee, #3b466440);
+  --workspace-edge: light-dark(#ffffffe6, #ffffff2e);
+  --workspace-shadow: light-dark(#34436a40, #00000080);
+  --chart-primary: light-dark(#7760d6, #b5a7ff);
+  --chart-secondary: light-dark(#247d92, #8e81c7);
+  --chart-grid: light-dark(#dbe0ee, #ffffff20);
   position: relative;
   min-height: 100svh;
   isolation: isolate;
@@ -29,38 +29,9 @@
   position: absolute;
   inset: -8%;
   background:
-    linear-gradient(
-      132deg,
-      transparent 14%,
-      light-dark(#c1b5e638, #66528d24) 29%,
-      transparent 43%,
-      light-dark(#afc5e333, #465d8a29) 64%,
-      transparent 82%
-    ),
-    radial-gradient(ellipse at 86% 18%, light-dark(#c8bce94d, #5d438b38), transparent 60%);
-  opacity: 1;
-  transition: opacity 500ms var(--ease-out);
-}
-.workspace-silk canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 500ms var(--ease-out);
-}
-.workspace-silk[data-ready="true"] canvas {
-  opacity: 1;
-}
-.workspace-silk[data-ready="true"]::before {
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .workspace-silk canvas,
-  .workspace-silk::before {
-    transition: none;
-  }
+    radial-gradient(ellipse at 84% 12%, light-dark(#c8bcf37a, #76649b30), transparent 48%),
+    radial-gradient(ellipse at 18% 48%, light-dark(#d5cff289, #6259751c), transparent 52%),
+    radial-gradient(ellipse at 78% 88%, light-dark(#c8ddef66, #53566e19), transparent 52%);
 }
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .workspace-silk {
@@ -157,7 +128,7 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid light-dark(#ffffffa8, #c5bbff50);
+  border: 1px solid light-dark(#ffffffa8, #c1b2ec50);
   border-radius: 12px;
   background: linear-gradient(145deg, #8a77ec, #6252c9);
   color: #fff;
@@ -215,7 +186,14 @@
     var(--workspace-glass);
   box-shadow:
     inset 0 1px 0 var(--workspace-shine),
-    0 8px 28px -20px var(--workspace-shadow);
+    0 10px 28px -18px var(--workspace-shadow);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  backdrop-filter: blur(14px) saturate(125%);
+}
+.workspace-sidebar.navigation-glass {
+  --navigation-tint: light-dark(#f8faffdb, #1d1d21ed);
+  border-color: var(--workspace-edge);
+  box-shadow: inset 0 1px 0 var(--workspace-shine), 0 16px 38px -22px var(--workspace-shadow);
 }
 .workspace-glass {
   backdrop-filter: blur(18px) saturate(125%);
@@ -263,6 +241,11 @@
   box-shadow:
     inset 0 1px 0 #ffffff26,
     0 5px 12px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+.workspace-quiz-action {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--workspace-edge));
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  color: var(--accent-foreground);
 }
 .workspace-action:active:not(:disabled) {
   transform: scale(0.97);
@@ -495,7 +478,7 @@
   border: 1px solid var(--workspace-edge);
   background: linear-gradient(
     150deg,
-    light-dark(#ffffffed, #d9d1ff26),
+    light-dark(#ffffffed, #d2c9f026),
     light-dark(#ffffffa3, #aabce80e)
   );
   box-shadow:
@@ -511,25 +494,26 @@
 }
 .workspace-metric-icon {
   display: flex;
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--workspace-edge);
   border-radius: 8px;
-  background: light-dark(#ffffff94, #b8a8ff12);
+  background: light-dark(#f4f0ff, #a99ce624);
   box-shadow: inset 0 1px 0 var(--workspace-shine);
   color: var(--accent-foreground);
 }
 .workspace-metric:not(:first-child) {
   background:
-    linear-gradient(135deg, light-dark(#eeeaff52, #a89ce30c), transparent 75%),
+    linear-gradient(145deg, light-dark(#ffffffb3, #ffffff0c), transparent 52%),
+    linear-gradient(125deg, light-dark(#e8e2ff45, #a397e812), transparent 80%),
     var(--workspace-glass);
 }
 .workspace-progress-panel {
   background:
-    linear-gradient(155deg, light-dark(#e7e0ff80, #9985e31c), transparent 65%),
+    linear-gradient(155deg, light-dark(#e7e0ff80, #a18be520), transparent 65%),
     var(--workspace-glass);
 }
 .workspace-panel-symbol {
@@ -541,19 +525,19 @@
   justify-content: center;
   border: 1px solid var(--workspace-edge);
   border-radius: 10px;
-  background: light-dark(#f2edff99, #b4a4f012);
+  background: light-dark(#f2edff99, #ad9df018);
   box-shadow: inset 0 1px 0 var(--workspace-shine);
   color: var(--accent-foreground);
 }
 .workspace-chart-panel {
   background:
-    linear-gradient(150deg, light-dark(#faf8ff80, #b6a9f008), transparent 60%),
+    linear-gradient(150deg, light-dark(#faf8ff80, #c0b3ed0a), transparent 60%),
     var(--workspace-glass);
 }
 .workspace-achievement[data-unlocked="true"] {
-  border-color: light-dark(#cfc4ef, #9983d950);
+  border-color: light-dark(#cfc4ef, #a899df50);
   background:
-    linear-gradient(145deg, light-dark(#e8e0ff6b, #a38ed516), transparent 70%),
+    linear-gradient(145deg, light-dark(#e8e0ff6b, #a38ed520), transparent 70%),
     var(--workspace-glass);
 }
 .workspace-achievement .workspace-progress {
@@ -608,6 +592,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 22px;
+}
+@media (min-width: 40rem) {
+  .workspace-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  }
 }
 .workspace-overview-layout {
   display: flex;
@@ -664,41 +653,80 @@
 }
 .workspace-metric {
   display: flex;
-  min-height: 96px;
   flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px 18px;
+  gap: 10px;
+  min-height: 104px;
+  padding: 14px 16px;
   border-radius: 16px;
 }
 .workspace-metric:first-child {
-  grid-column: 1 / -1;
   background:
-    linear-gradient(120deg, light-dark(#dbd3ff75, #8e7fe329), transparent 80%),
+    linear-gradient(145deg, light-dark(#ffffffa6, #ffffff0c), transparent 50%),
+    linear-gradient(120deg, light-dark(#dbd3ff80, #8e7fe329), transparent 80%),
     var(--workspace-glass);
 }
-.workspace-metric-label {
+.workspace-metric-heading {
   display: flex;
+  min-width: 0;
+  min-height: 36px;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+}
+.workspace-metric-label {
+  min-width: 0;
   color: var(--muted);
   font-size: 13px;
   font-weight: 500;
 }
 .workspace-metric-value {
-  margin-top: 8px;
-  font-size: 28px;
+  margin-top: 0;
+  font-size: clamp(21px, 1.5vw, 28px);
   line-height: 1.15;
   font-weight: 600;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.workspace-metric-label h2 {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+@media (max-width: 22.5rem) {
+  .workspace-metric {
+    gap: 8px;
+    padding: 12px 10px;
+  }
+  .workspace-metric-heading {
+    gap: 6px;
+  }
+  .workspace-metric-icon {
+    width: 24px;
+    height: 24px;
+  }
+  .workspace-metric-label {
+    font-size: 11px;
+  }
+  .workspace-metric-value {
+    font-size: 20px;
+  }
+}
+.topic-status {
+  border-color: var(--border);
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+.topic-status[data-status="reinforce"] {
+  color: light-dark(#8d3b35, #ffb8aa);
+  border-color: light-dark(#db9b92, #a4625a);
+  background: light-dark(#fff0ec, #512b2b);
+}
+.topic-status[data-status="review"] {
+  color: light-dark(#79510d, #f2d395);
+  border-color: light-dark(#d5b77b, #927744);
+  background: light-dark(#fff6e3, #483c27);
+}
+.topic-status[data-status="strong"] {
+  color: light-dark(#276244, #a5dfc1);
+  border-color: light-dark(#9dc4af, #588d72);
+  background: light-dark(#eaf8f0, #254638);
 }
 .workspace-data-toolbar {
   display: flex;
@@ -788,7 +816,7 @@
   }
   .workspace-back-link:hover {
     color: var(--accent-foreground);
-    background: light-dark(#ffffffcb, #2d3652b3);
+    background: light-dark(#ffffffcb, #35323fb3);
   }
   .workspace-back-link:hover .dashboard-icon {
     transform: rotate(180deg) translateX(2px);
@@ -823,21 +851,7 @@
   }
 }
 @media (min-width: 120rem) {
-  .workspace-metric {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-  .workspace-metric-label {
-    flex-direction: column-reverse;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .workspace-metric-value {
-    margin-top: 0;
-    text-align: right;
-  }
+  .workspace-metric { padding: 16px 18px; }
 }
 @media (min-width: 160rem) {
   .workspace-analytics {
@@ -936,14 +950,49 @@
   }
 }
 .workspace-chart-tooltip {
-  max-width: min(260px, 70vw);
-  border: 1px solid var(--workspace-edge);
-  border-radius: 14px;
-  padding: 12px 15px;
-  background: light-dark(#fffffff0, #202840f2);
-  box-shadow: 0 10px 30px #00000026;
+  width: max-content;
+  max-width: min(250px, 70vw);
+  border: 1px solid light-dark(#fff, #ffffff30);
+  border-radius: 13px;
+  padding: 12px 14px;
+  background:
+    linear-gradient(145deg, light-dark(#ffffffc9, #ffffff0d), transparent 70%),
+    light-dark(#f8f7fffa, #29282ef7);
+  box-shadow: 0 10px 28px -12px light-dark(#514a773d, #00000080);
   color: var(--foreground);
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+.workspace-chart-tooltip-date {
+  color: var(--muted);
+  font-size: 11px;
+}
+.workspace-chart-tooltip-title {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.workspace-chart-tooltip-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 10px;
+}
+.workspace-chart-tooltip-result strong {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.workspace-chart-tooltip-result span {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 .workspace-chart-stat {
   display: flex;
@@ -1089,7 +1138,7 @@
   border-radius: 10px;
   background: linear-gradient(
     145deg,
-    light-dark(#ffffffe0, #c9c3ff1c),
+    light-dark(#ffffffe0, #d2c9eb1c),
     light-dark(#ffffff90, #b7caff09)
   );
   box-shadow:
@@ -1173,7 +1222,7 @@
   border-radius: inherit;
   background: linear-gradient(
     145deg,
-    light-dark(#ffffffd9, #c9c3ff1c),
+    light-dark(#ffffffd9, #d2c9eb1c),
     light-dark(#ffffff70, #b7caff09)
   );
   box-shadow:
@@ -1344,6 +1393,9 @@
       inset 0 1px 0 #ffffff26,
       0 7px 18px color-mix(in srgb, var(--primary) 28%, transparent);
   }
+  .workspace-quiz-action:hover {
+    background: color-mix(in srgb, var(--primary) 20%, var(--surface));
+  }
   .workspace-section-link:hover {
     text-decoration: underline;
     text-underline-offset: 4px;
@@ -1378,12 +1430,6 @@
   }
 }
 @media (min-width: 48rem) {
-  .workspace-metrics {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-  .workspace-metric:first-child {
-    grid-column: auto;
-  }
   .workspace-metric {
     padding: 15px 16px;
   }
@@ -1509,6 +1555,14 @@
 .workspace-evolution-plot {
   height: clamp(224px, calc(12.5vw - 16px), 360px);
 }
+.workspace-analytics .recharts-surface:focus:not(:focus-visible) {
+  outline: none;
+}
+.workspace-analytics .recharts-surface:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
 .workspace-progress-panel {
   display: flex;
   flex-direction: column;
@@ -1559,8 +1613,10 @@
 @media (prefers-reduced-transparency: reduce) {
   .workspace-panel,
   .workspace-sidebar,
-  .workspace-mobile-navigation {
+  .workspace-mobile-navigation,
+  .workspace-chart-tooltip {
     background: var(--surface);
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 }

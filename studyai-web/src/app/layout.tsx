@@ -50,7 +50,7 @@ const themeRestoreScript = `
       const isDark = theme === "dark" || (theme !== "light" && systemTheme.matches);
       document.querySelector('meta[name="theme-color"]')?.setAttribute(
         "content",
-        isDark ? "#111527" : "#f2f4fb",
+        isDark ? "#121215" : "#f2f4fb",
       );
     }
 

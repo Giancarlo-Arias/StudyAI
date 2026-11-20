@@ -4,18 +4,18 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   color-scheme: light dark;
-  --background: light-dark(#f2f4fb, #111527);
-  --foreground: light-dark(#28273f, #eef0ff);
-  --surface: light-dark(#ffffff, #1c223a);
-  --surface-raised: light-dark(#ffffff, #262d49);
-  --surface-soft: light-dark(#e9edf7, #29314c);
-  --primary: light-dark(#6256d9, #6557d4);
+  --background: light-dark(#f2f4fb, #121215);
+  --foreground: light-dark(#28273f, #f3f2f6);
+  --surface: light-dark(#ffffff, #202024);
+  --surface-raised: light-dark(#ffffff, #2a2a30);
+  --surface-soft: light-dark(#e9edf7, #303036);
+  --primary: #6256d9;
   --primary-foreground: #ffffff;
-  --accent-foreground: light-dark(#5847ba, #c2b8ff);
-  --muted: light-dark(#636a82, #a8b1cd);
-  --border: light-dark(#d7ddeb, #343d5b);
-  --input-border: light-dark(#8189a1, #7884a1);
-  --accent-soft: light-dark(#eae5fc, #383057);
+  --accent-foreground: light-dark(#5847ba, #c4baff);
+  --muted: light-dark(#636a82, #b6b4bf);
+  --border: light-dark(#d7ddeb, #414048);
+  --input-border: light-dark(#8189a1, #898590);
+  --accent-soft: light-dark(#eae5fc, #373254);
   --focus: var(--accent-foreground);
 }
 
@@ -90,8 +90,8 @@
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(ellipse at 78% 22%, light-dark(#c2b4ed75, #5c42844a), transparent 56%),
-    radial-gradient(ellipse at 24% 76%, light-dark(#a1ced665, #23617836), transparent 54%);
+    radial-gradient(ellipse at 78% 22%, light-dark(#c2b4ed75, #6f5ca33b), transparent 56%),
+    radial-gradient(ellipse at 24% 76%, light-dark(#a1ced665, #48435426), transparent 54%);
 }
 .ambient-field-flow {
   position: absolute;
@@ -104,8 +104,8 @@
   background: linear-gradient(
     100deg,
     transparent 5%,
-    light-dark(#8872c7, #a48bdb) 35%,
-    light-dark(#74b1c4, #6caec6) 68%,
+    light-dark(#8872c7, #9182be) 35%,
+    light-dark(#74b1c4, #696277) 68%,
     transparent 95%
   );
   opacity: 0.62;
