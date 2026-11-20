@@ -27,6 +27,7 @@ def quiz_environment(monkeypatch):
 
     question = {
         "question_text": "¿Qué permite la autenticación?",
+        "topic": "Autenticación de usuarios",
         "options": [
             "Verificar la identidad",
             "Eliminar archivos",
@@ -86,6 +87,7 @@ def test_generate_quiz_using_rag(quiz_environment):
     )
 
     assert quiz.questions[0].chunk_id == data["chunk_id"]
+    assert quiz.questions[0].topic == "Autenticación de usuarios"
 
     assert data["calls"][0] == (
         "search",

@@ -1,3 +1,4 @@
+
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth-server";
 import { getDashboardData } from "@/lib/dashboard";

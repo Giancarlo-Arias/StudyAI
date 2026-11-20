@@ -110,3 +110,87 @@ def test_progress_requires_authentication():
         response = client.get("/api/v1/progress")
 
     assert response.status_code in (401, 403)
+
+
+def test_get_topic_progress(client, monkeypatch):
+    document_id = uuid4()
+    calls = []
+
+    def fake_topic_progress(user_id):
+        calls.append(user_id)
+
+        return {
+            "topics": [
+                {
+                    "document_id": document_id,
+                    "filename": "ingles.pdf",
+                    "topic": "Past Perfect",
+                    "questions_evaluated": 5,
+                    "correct_questions": 1,
+                    "incorrect_questions": 4,
+                    "accuracy_percent": 20.0,
+                    "status": "reinforce",
+                },
+                {
+                    "document_id": document_id,
+                    "filename": "ingles.pdf",
+                    "topic": "Phrasal Verbs",
+                    "questions_evaluated": 2,
+                    "correct_questions": 1,
+                    "incorrect_questions": 1,
+                    "accuracy_percent": 50.0,
+                    "status": "insufficient_data",
+                },
+            ],
+        }
+
+    monkeypatch.setattr(
+        progress,
+        "get_topic_progress_for_user",
+        fake_topic_progress,
+    )
+
+    response = client.get("/api/v1/progress/topics")
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert len(result["topics"]) == 2
+
+    assert result["topics"][0]["topic"] == "Past Perfect"
+    assert result["topics"][0]["accuracy_percent"] == 20.0
+    assert result["topics"][0]["status"] == "reinforce"
+    assert result["topics"][0]["document_id"] == str(document_id)
+
+    assert result["topics"][1]["status"] == "insufficient_data"
+
+    assert calls == [2]
+
+
+def test_get_topic_progress_without_activity(client, monkeypatch):
+    monkeypatch.setattr(
+        progress,
+        "get_topic_progress_for_user",
+        lambda user_id: {"topics": []},
+    )
+
+    response = client.get("/api/v1/progress/topics")
+
+    assert response.status_code == 200
+    assert response.json() == {"topics": []}
+
+
+def test_topic_progress_requires_authentication():
+    app = FastAPI()
+
+    app.include_router(
+        progress.router,
+        prefix="/api/v1",
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/api/v1/progress/topics")
+
+    assert response.status_code in (401, 403)
+    

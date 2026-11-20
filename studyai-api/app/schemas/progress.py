@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -36,3 +37,23 @@ class DocumentProgressItem(BaseModel):
 
 class DocumentProgressResponse(BaseModel):
     documents: list[DocumentProgressItem]
+
+
+class TopicProgressItem(BaseModel):
+    document_id: UUID
+    filename: str
+    topic: str
+    questions_evaluated: int
+    correct_questions: int
+    incorrect_questions: int
+    accuracy_percent: float
+    status: Literal[
+        "insufficient_data",
+        "reinforce",
+        "review",
+        "strong",
+    ]
+
+
+class TopicProgressResponse(BaseModel):
+    topics: list[TopicProgressItem]

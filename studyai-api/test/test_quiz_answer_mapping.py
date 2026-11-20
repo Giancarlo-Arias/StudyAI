@@ -16,6 +16,7 @@ def make_quiz_json(chunk_id, correct_answer):
                     "question_text": (
                         "¿Qué indica el hallazgo de moléculas orgánicas?"
                     ),
+                    "topic": "Moléculas orgánicas y vida",
                     "options": [
                         "Demuestra la existencia de vida.",
                         "Indica un fallo instrumental.",
@@ -50,6 +51,7 @@ def test_correct_option_is_calculated_from_answer_text():
     )
 
     assert quiz.questions[0].correct_option == 2
+    assert quiz.questions[0].topic == "Moléculas orgánicas y vida"
 
 
 def test_rejects_correct_answer_not_present_in_options():

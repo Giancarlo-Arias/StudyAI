@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -46,7 +47,10 @@ const DashboardCharts = dynamic(
                 <div className="h-4 w-40 max-w-full rounded-md bg-surface-soft" />
                 <div className="mt-7 space-y-4">
                   {[1, 2, 3].map((row) => (
-                    <div key={row} className="h-10 rounded-lg bg-surface-soft/60" />
+                    <div
+                      key={row}
+                      className="h-10 rounded-lg bg-surface-soft/60"
+                    />
                   ))}
                 </div>
               </div>
@@ -59,24 +63,31 @@ const DashboardCharts = dynamic(
   },
 );
 
-const scoreFormatter = new Intl.NumberFormat("es-CR", { maximumFractionDigits: 1 });
+const scoreFormatter = new Intl.NumberFormat("es-CR", {
+  maximumFractionDigits: 1,
+});
+
 const countFormatter = new Intl.NumberFormat("es-CR");
+
 const compactCountFormatter = new Intl.NumberFormat("es-CR", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
 
 const defaultOrder = "metrics,study,achievements";
+
 const sectionLabels = {
   metrics: "Indicadores",
   study: "Tu aprendizaje",
   achievements: "Mis logros",
 } as const;
+
 type DashboardSection = keyof typeof sectionLabels;
 
 function subscribeOrder(callback: () => void) {
   window.addEventListener("studyai-dashboard-order", callback);
   window.addEventListener("storage", callback);
+
   return () => {
     window.removeEventListener("studyai-dashboard-order", callback);
     window.removeEventListener("storage", callback);
@@ -87,9 +98,12 @@ function getOrder() {
   try {
     const value = localStorage.getItem("studyai-dashboard-order");
     const items = value?.split(",") ?? [];
+
     return items.length === 3 &&
       new Set(items).size === 3 &&
-      items.every((item) => Object.prototype.hasOwnProperty.call(sectionLabels, item))
+      items.every((item) =>
+        Object.prototype.hasOwnProperty.call(sectionLabels, item),
+      )
       ? items.join(",")
       : defaultOrder;
   } catch {
@@ -111,7 +125,9 @@ function formatMetricCount(value: number | null) {
 
 function formatDate(value: string | null) {
   if (!value) return "Sin actividad todavía";
+
   const date = new Date(value);
+
   return Number.isNaN(date.getTime())
     ? "Fecha no disponible"
     : new Intl.DateTimeFormat("es-CR", {
@@ -130,15 +146,22 @@ export function DashboardOverview({
   fullName: string;
 }) {
   const [view, setView] = useState<"summary" | "charts">("charts");
-  const order = useSyncExternalStore(subscribeOrder, getOrder, () => defaultOrder).split(
-    ",",
-  ) as DashboardSection[];
+
+  const order = useSyncExternalStore(
+    subscribeOrder,
+    getOrder,
+    () => defaultOrder,
+  ).split(",") as DashboardSection[];
+
   function moveSection(section: DashboardSection, direction: -1 | 1) {
     const next = [...order];
     const index = next.indexOf(section);
     const target = index + direction;
+
     if (target < 0 || target >= next.length) return;
+
     [next[index], next[target]] = [next[target], next[index]];
+
     try {
       localStorage.setItem("studyai-dashboard-order", next.join(","));
       window.dispatchEvent(new Event("studyai-dashboard-order"));
@@ -146,7 +169,9 @@ export function DashboardOverview({
       return;
     }
   }
+
   const { progress, documents, achievements } = dashboard;
+
   const milestones = [
     {
       code: "web_25_attempts",
@@ -167,21 +192,30 @@ export function DashboardOverview({
       unlocked_at: null,
     },
   ];
+
   const latestAttempt = progress.recent_attempts.reduce<
     DashboardResponse["progress"]["recent_attempts"][number] | null
   >((latest, attempt) => {
     if (
       !latest ||
-      new Date(attempt.submitted_at).getTime() > new Date(latest.submitted_at).getTime()
+      new Date(attempt.submitted_at).getTime() >
+        new Date(latest.submitted_at).getTime()
     ) {
       return attempt;
     }
     return latest;
   }, null);
+
   const latestScore = latestAttempt?.score_percent ?? null;
-  const completed = Math.min(progress.total_quizzes, Math.max(0, progress.quizzes_completed));
+
+  const completed = Math.min(
+    progress.total_quizzes,
+    Math.max(0, progress.quizzes_completed),
+  );
+
   const pending = Math.max(0, progress.total_quizzes - completed);
   const firstName = fullName.trim().split(/\s+/)[0] || "estudiante";
+
   const metrics: {
     label: string;
     value: string;
@@ -232,7 +266,10 @@ export function DashboardOverview({
 
   const sections: Record<DashboardSection, ReactNode> = {
     metrics: (
-      <section aria-label="Tu aprendizaje en cifras" className="workspace-metrics">
+      <section
+        aria-label="Tu aprendizaje en cifras"
+        className="workspace-metrics"
+      >
         {metrics.map((metric) => (
           <article
             key={metric.label}
@@ -244,32 +281,45 @@ export function DashboardOverview({
                 {metric.label}
               </h2>
               <span data-reveal-content="" className="workspace-metric-icon">
-                <DashboardIcon name={metric.icon} className="size-3.5" />
+                <DashboardIcon
+                  name={metric.icon}
+                  className="size-3.5"
+                />
               </span>
             </div>
             <p
               data-reveal-content=""
               className="workspace-metric-value"
               title={metric.exactValue}
-              aria-label={metric.label + ": " + (metric.exactValue ?? metric.value)}
+              aria-label={
+                metric.label + ": " + (metric.exactValue ?? metric.value)
+              }
             >
-              <AnimatedMetric value={metric.rawValue} format={metric.format} />
+              <AnimatedMetric
+                value={metric.rawValue}
+                format={metric.format}
+              />
             </p>
           </article>
         ))}
       </section>
     ),
+
     study: (
       <>
         <div data-reveal="text" className="workspace-data-toolbar">
           <div>
-            <h2 className="text-base font-semibold tracking-tight">Tu aprendizaje</h2>
+            <h2 className="text-base font-semibold tracking-tight">
+              Tu aprendizaje
+            </h2>
             <p className="mt-1 text-sm text-muted">
               {progress.total_quizzes === 0
                 ? "Empieza con un documento y dale forma a tu aprendizaje."
                 : pending > 0
                   ? pending +
-                    (pending === 1 ? " cuestionario por completar" : " cuestionarios por completar")
+                    (pending === 1
+                      ? " cuestionario por completar"
+                      : " cuestionarios por completar")
                   : "Has completado todos tus cuestionarios."}
             </p>
           </div>
@@ -292,16 +342,22 @@ export function DashboardOverview({
                 aria-controls="dashboard-study-content"
                 onClick={(event) => {
                   if (view === option.id) return;
-                  if (event.detail === 0) setView(option.id);
-                  else
+
+                  if (event.detail === 0) {
+                    setView(option.id);
+                  } else {
                     startTransition(() => {
                       addTransitionType("dashboard-display");
                       setView(option.id);
                     });
+                  }
                 }}
               >
                 {view === option.id && (
-                  <span className="workspace-segment-lens" aria-hidden="true" />
+                  <span
+                    className="workspace-segment-lens"
+                    aria-hidden="true"
+                  />
                 )}
                 <DashboardIcon name={option.icon} className="size-4" />
                 {option.label}
@@ -312,11 +368,17 @@ export function DashboardOverview({
 
         <ViewTransition
           default="none"
-          update={{ "dashboard-display": "dashboard-display", default: "none" }}
+          update={{
+            "dashboard-display": "dashboard-display",
+            default: "none",
+          }}
         >
           <div id="dashboard-study-content">
             {view === "charts" ? (
-              <DashboardCharts progress={progress} documents={documents} />
+              <DashboardCharts
+                progress={progress}
+                documents={documents}
+              />
             ) : (
               <DashboardReveal
                 containerEntrance
@@ -329,28 +391,41 @@ export function DashboardOverview({
                 >
                   <div className="workspace-panel-heading border-b border-border">
                     <div>
-                      <h3 id="study-documents-title" className="workspace-panel-title">
+                      <h3
+                        id="study-documents-title"
+                        className="workspace-panel-title"
+                      >
                         Tus documentos
                       </h3>
                       <p className="mt-1 text-xs text-muted">
                         El punto de partida de tu aprendizaje
                       </p>
                     </div>
-                    <Link href="/dashboard/documents" className="workspace-section-link">
+                    <Link
+                      href="/dashboard/documents"
+                      className="workspace-section-link"
+                    >
                       Biblioteca
                       <DashboardIcon name="arrow" className="size-4" />
                     </Link>
                   </div>
+
                   {documents.length === 0 ? (
                     <div className="workspace-empty">
                       <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-foreground">
                         <DashboardIcon name="document" />
                       </span>
-                      <p className="font-medium">Empieza con un documento</p>
-                      <p className="max-w-xs text-sm leading-6 text-muted">
-                        Sube un PDF y conviértelo en una nueva oportunidad para aprender.
+                      <p className="font-medium">
+                        Empieza con un documento
                       </p>
-                      <Link href="/dashboard/documents" className="workspace-section-link">
+                      <p className="max-w-xs text-sm leading-6 text-muted">
+                        Sube un PDF y conviértelo en una nueva oportunidad
+                        para aprender.
+                      </p>
+                      <Link
+                        href="/dashboard/documents"
+                        className="workspace-section-link"
+                      >
                         Ir a mis documentos
                         <DashboardIcon name="arrow" className="size-4" />
                       </Link>
@@ -358,14 +433,22 @@ export function DashboardOverview({
                   ) : (
                     <ul className="divide-y divide-border">
                       {documents.map((document) => (
-                        <li key={document.document_id} className="p-4 sm:px-5">
+                        <li
+                          key={document.document_id}
+                          className="p-4 sm:px-5"
+                        >
                           <div className="flex items-start gap-3">
                             <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-soft text-muted">
-                              <DashboardIcon name="document" className="size-[18px]" />
+                              <DashboardIcon
+                                name="document"
+                                className="size-[18px]"
+                              />
                             </span>
                             <div className="min-w-0 flex-1">
                               <Link
-                                href={`/dashboard/documents/${encodeURIComponent(document.document_id)}`}
+                                href={`/dashboard/documents/${encodeURIComponent(
+                                  document.document_id,
+                                )}`}
                                 className="block min-h-11 break-words text-sm font-semibold underline-offset-4 hover:text-accent-foreground hover:underline"
                               >
                                 {document.filename}
@@ -376,19 +459,31 @@ export function DashboardOverview({
                             </div>
                             <div className="shrink-0 text-right">
                               <p className="text-sm font-semibold tabular-nums">
-                                {formatScore(document.average_score_percent)}
+                                {formatScore(
+                                  document.average_score_percent,
+                                )}
                               </p>
-                              <p className="mt-1 text-[11px] text-muted">promedio</p>
+                              <p className="mt-1 text-[11px] text-muted">
+                                promedio
+                              </p>
                             </div>
                           </div>
                           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-                            <span>{document.total_quizzes} cuestionarios</span>
-                            <span>{document.quizzes_completed} completados</span>
-                            <span>{document.total_attempts} intentos</span>
+                            <span>
+                              {document.total_quizzes} cuestionarios
+                            </span>
+                            <span>
+                              {document.quizzes_completed} completados
+                            </span>
+                            <span>
+                              {document.total_attempts} intentos
+                            </span>
                             <span className="ml-auto">
                               Mejor:{" "}
                               <span className="font-medium text-foreground">
-                                {formatScore(document.best_score_percent)}
+                                {formatScore(
+                                  document.best_score_percent,
+                                )}
                               </span>
                             </span>
                           </div>
@@ -405,23 +500,38 @@ export function DashboardOverview({
                 >
                   <div className="workspace-panel-heading border-b border-border">
                     <div>
-                      <h3 id="recent-study-title" className="workspace-panel-title">
+                      <h3
+                        id="recent-study-title"
+                        className="workspace-panel-title"
+                      >
                         Últimos resultados
                       </h3>
-                      <p className="mt-1 text-xs text-muted">Cada intento cuenta</p>
+                      <p className="mt-1 text-xs text-muted">
+                        Cada intento cuenta
+                      </p>
                     </div>
-                    <DashboardIcon name="clock" className="mt-1 size-[18px] text-muted" />
+                    <DashboardIcon
+                      name="clock"
+                      className="mt-1 size-[18px] text-muted"
+                    />
                   </div>
+
                   {progress.recent_attempts.length === 0 ? (
                     <div className="workspace-empty">
                       <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-foreground">
                         <DashboardIcon name="quiz" />
                       </span>
-                      <p className="font-medium">Tu primer resultado te espera</p>
-                      <p className="max-w-xs text-sm leading-6 text-muted">
-                        Resuelve un cuestionario para empezar a ver tus avances.
+                      <p className="font-medium">
+                        Tu primer resultado te espera
                       </p>
-                      <Link href="/dashboard/quizzes" className="workspace-section-link">
+                      <p className="max-w-xs text-sm leading-6 text-muted">
+                        Resuelve un cuestionario para empezar a ver
+                        tus avances.
+                      </p>
+                      <Link
+                        href="/dashboard/quizzes"
+                        className="workspace-section-link"
+                      >
                         Ver cuestionarios
                         <DashboardIcon name="arrow" className="size-4" />
                       </Link>
@@ -431,18 +541,26 @@ export function DashboardOverview({
                       {progress.recent_attempts.map((attempt) => (
                         <li key={attempt.attempt_id}>
                           <Link
-                            href={`/dashboard/quizzes/${encodeURIComponent(attempt.quiz_id)}/attempts/${encodeURIComponent(attempt.attempt_id)}`}
+                            href={`/dashboard/quizzes/${encodeURIComponent(
+                              attempt.quiz_id,
+                            )}/attempts/${encodeURIComponent(
+                              attempt.attempt_id,
+                            )}`}
                             className="group flex items-start gap-3 p-4 transition-colors hover:bg-surface-soft sm:px-5"
                           >
                             <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-foreground">
-                              <DashboardIcon name="check" className="size-4" />
+                              <DashboardIcon
+                                name="check"
+                                className="size-4"
+                              />
                             </span>
                             <div className="min-w-0 flex-1">
                               <h4 className="break-words text-sm font-medium group-hover:text-accent-foreground">
                                 {attempt.quiz_title}
                               </h4>
                               <p className="mt-1 text-xs leading-5 text-muted">
-                                {attempt.correct_count} de {attempt.question_count} correctas ·{" "}
+                                {attempt.correct_count} de{" "}
+                                {attempt.question_count} correctas ·{" "}
                                 {formatDate(attempt.submitted_at)}
                               </p>
                             </div>
@@ -461,13 +579,20 @@ export function DashboardOverview({
         </ViewTransition>
       </>
     ),
+
     achievements: (
       <ViewTransition
         default="none"
-        update={{ "dashboard-display": "workspace-follow", default: "none" }}
+        update={{
+          "dashboard-display": "workspace-follow",
+          default: "none",
+        }}
       >
         <div>
-          <AchievementsSection key={view} achievements={[...achievements, ...milestones]} />
+          <AchievementsSection
+            key={view}
+            achievements={[...achievements, ...milestones]}
+          />
         </div>
       </ViewTransition>
     ),
@@ -475,7 +600,10 @@ export function DashboardOverview({
 
   return (
     <main>
-      <DashboardReveal containerEntrance className="workspace-overview-layout">
+      <DashboardReveal
+        containerEntrance
+        className="workspace-overview-layout"
+      >
         <header
           data-reveal="text"
           className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"
@@ -488,14 +616,6 @@ export function DashboardOverview({
               Todo lo que estás aprendiendo, en un solo lugar.
             </p>
           </div>
-          <Link
-            href={progress.total_quizzes > 0 ? "/dashboard/quizzes" : "/dashboard/documents"}
-            className="workspace-action workspace-action-primary workspace-study-action w-fit shrink-0"
-          >
-            <DashboardIcon name="document" className="size-[18px]" />
-            Continuar estudiando
-            <DashboardIcon name="arrow" className="size-4" />
-          </Link>
         </header>
 
         <details className="workspace-order-settings">
@@ -531,7 +651,9 @@ export function DashboardOverview({
         </details>
 
         {order.map((section) => (
-          <Fragment key={section}>{sections[section]}</Fragment>
+          <Fragment key={section}>
+            {sections[section]}
+          </Fragment>
         ))}
       </DashboardReveal>
     </main>

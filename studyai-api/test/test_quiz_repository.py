@@ -14,6 +14,7 @@ def make_quiz(chunk_ids):
     for index, chunk_id in enumerate(chunk_ids, start=1):
         questions.append({
             "question_text": f"Pregunta educativa {index}",
+            "topic": "Fundamentos de Python",
             "options": [
                 "Respuesta correcta",
                 "Respuesta incorrecta B",
@@ -248,6 +249,7 @@ def test_save_generated_quiz(quiz_environment):
                     position,
                     chunk_id,
                     question_text,
+                    topic,
                     options,
                     correct_option,
                     explanation
@@ -267,6 +269,7 @@ def test_save_generated_quiz(quiz_environment):
 
     assert questions[0]["chunk_id"] == data["chunk_a"]
     assert questions[0]["correct_option"] == 0
+    assert questions[0]["topic"] == "Fundamentos de Python"
 
     assert questions[0]["options"] == [
         "Respuesta correcta",

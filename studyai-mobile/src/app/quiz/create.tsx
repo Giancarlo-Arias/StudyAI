@@ -291,23 +291,25 @@ export default function CreateQuizScreen() {
               style={[styles.successCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}
               contentStyle={styles.successContent}
             >
-              <MotionIcon delay={420}>
-                <View style={[styles.successIcon, { backgroundColor: colors.softAccent }]}>
-                  <CheckCircle2 size={31} color={colors.accent} />
-                </View>
-              </MotionIcon>
+              <View style={styles.successHeader}>
+                <MotionIcon delay={420}>
+                  <View style={[styles.successIcon, { backgroundColor: colors.softAccent }]}>
+                    <CheckCircle2 size={26} color={colors.accent} />
+                  </View>
+                </MotionIcon>
 
-              <View style={styles.successText}>
-                <MotionText
-                  text="¡Cuestionario creado!"
-                  delay={510}
-                  style={[styles.successTitle, { color: colors.text }]}
-                />
-                <MotionText
-                  text="Selecciona cómo quieres responder las preguntas."
-                  delay={600}
-                  style={[styles.successDescription, { color: colors.secondary }]}
-                />
+                <View style={styles.successText}>
+                  <MotionText
+                    text="¡Cuestionario creado!"
+                    delay={510}
+                    style={[styles.successTitle, { color: colors.text }]}
+                  />
+                  <MotionText
+                    text="Selecciona cómo quieres responder las preguntas."
+                    delay={600}
+                    style={[styles.successDescription, { color: colors.secondary }]}
+                  />
+                </View>
               </View>
 
               <Text style={[styles.successName, { color: colors.text }]}>{generated.title}</Text>
@@ -403,7 +405,7 @@ const styles = StyleSheet.create({
   optionCopy: { flex: 1, gap: 5 },
   optionTitle: { ...typography, fontSize: 14, fontWeight: "800" },
   optionDescription: { ...typography, fontSize: 12 },
-  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  radio: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 17 },
   countGrid: { borderRadius: 19 },
   countGridContent: { flexDirection: "row", gap: 9 },
@@ -428,9 +430,10 @@ const styles = StyleSheet.create({
   generationSpinner: { marginTop: 11 },
   successCard: { borderRadius: 22, borderWidth: 1, padding: 18 },
   successContent: { gap: 17 },
-  successIcon: { width: 58, height: 58, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  successText: { gap: 6 },
-  successTitle: { ...typography, fontSize: 22, fontWeight: "800" },
+  successHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  successIcon: { width: 50, height: 50, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  successText: { flex: 1, minWidth: 0, gap: 5 },
+  successTitle: { ...typography, fontSize: 19, fontWeight: "800" },
   successDescription: { ...typography, fontSize: 13, lineHeight: 20 },
   successName: { ...typography, fontSize: 13, fontWeight: "700", lineHeight: 19 },
   successNote: { ...typography, fontSize: 12, lineHeight: 20 },

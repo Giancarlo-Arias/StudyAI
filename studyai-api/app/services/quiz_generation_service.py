@@ -84,6 +84,7 @@ def validate_generated_quiz_with_answer_text(
             GeneratedQuizQuestion(
                 question_text=question.question_text,
                 question_translation_es=question.question_translation_es,
+                topic=question.topic,
                 options=question.options,
                 correct_option=matches[0],
                 explanation=question.explanation,

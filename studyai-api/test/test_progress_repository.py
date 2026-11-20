@@ -288,3 +288,307 @@ def test_progress_isolated_by_user(progress_environment):
     assert result["recent_attempts"][0]["quiz_id"] == (
         data["quiz_b"]
     )
+
+
+def test_topic_progress_identifies_weakness(progress_environment):
+    data = progress_environment
+    quiz_id = data["quiz_b"]
+    chunk_id = uuid4()
+
+    with data["engine"].begin() as connection:
+        document_id = connection.execute(
+            text("""
+                SELECT document_id
+                FROM quizzes
+                WHERE id = :quiz_id;
+            """),
+            {"quiz_id": quiz_id},
+        ).scalar_one()
+
+        attempt_id = connection.execute(
+            text("""
+                SELECT id
+                FROM quiz_attempts
+                WHERE quiz_id = :quiz_id;
+            """),
+            {"quiz_id": quiz_id},
+        ).scalar_one()
+
+        connection.execute(
+            text("""
+                INSERT INTO document_chunks (
+                    id, document_id, page_number, chunk_index, text
+                )
+                VALUES (
+                    :id, :document_id, 1, 1, 'Contenido de prueba.'
+                );
+            """),
+            {"id": chunk_id, "document_id": document_id},
+        )
+
+        question_ids = [uuid4() for _ in range(4)]
+
+        for position, question_id in enumerate(question_ids, start=1):
+            connection.execute(
+                text("""
+                    INSERT INTO quiz_questions (
+                        id, quiz_id, chunk_id, position,
+                        question_text, topic, options,
+                        correct_option, explanation
+                    )
+                    VALUES (
+                        :id, :quiz_id, :chunk_id, :position,
+                        :question_text, :topic,
+                        CAST(:options AS JSONB), 0,
+                        'Explicación de prueba.'
+                    );
+                """),
+                {
+                    "id": question_id,
+                    "quiz_id": quiz_id,
+                    "chunk_id": chunk_id,
+                    "position": position,
+                    "question_text": f"Pregunta {position}",
+                    "topic": "Búsqueda semántica",
+                    "options": '["A", "B", "C", "D"]',
+                },
+            )
+
+        for index, question_id in enumerate(question_ids):
+            connection.execute(
+                text("""
+                    INSERT INTO quiz_attempt_answers (
+                        attempt_id, question_id,
+                        selected_option, is_correct
+                    )
+                    VALUES (
+                        :attempt_id, :question_id,
+                        :selected_option, :is_correct
+                    );
+                """),
+                {
+                    "attempt_id": attempt_id,
+                    "question_id": question_id,
+                    "selected_option": 0 if index == 0 else 1,
+                    "is_correct": index == 0,
+                },
+            )
+
+    result = progress_repository.get_topic_progress_for_user(
+        user_id=data["user_b"],
+    )
+
+    assert len(result["topics"]) == 1
+
+    topic = result["topics"][0]
+
+    assert topic["topic"] == "Búsqueda semántica"
+    assert topic["questions_evaluated"] == 4
+    assert topic["correct_questions"] == 1
+    assert topic["incorrect_questions"] == 3
+    assert topic["accuracy_percent"] == 25.0
+    assert topic["status"] == "reinforce"
+
+    # Los datos del usuario B no deben aparecer al usuario A.
+    other_user = progress_repository.get_topic_progress_for_user(
+        user_id=data["user_a"],
+    )
+
+    assert other_user["topics"] == []
+
+
+def create_topic_questions(connection, quiz_id, topics):
+    document_id = connection.execute(
+        text("""
+            SELECT document_id
+            FROM quizzes
+            WHERE id = :quiz_id;
+        """),
+        {"quiz_id": quiz_id},
+    ).scalar_one()
+
+    chunk_id = uuid4()
+
+    connection.execute(
+        text("""
+            INSERT INTO document_chunks (
+                id, document_id, page_number, chunk_index, text
+            )
+            VALUES (
+                :id, :document_id, 1, 1, 'Contenido de prueba.'
+            );
+        """),
+        {
+            "id": chunk_id,
+            "document_id": document_id,
+        },
+    )
+
+    question_ids = [uuid4() for _ in topics]
+
+    connection.execute(
+        text("""
+            INSERT INTO quiz_questions (
+                id, quiz_id, chunk_id, position,
+                question_text, topic, options,
+                correct_option, explanation
+            )
+            VALUES (
+                :id, :quiz_id, :chunk_id, :position,
+                :question_text, :topic,
+                CAST(:options AS JSONB), 0,
+                'Explicación de prueba.'
+            );
+        """),
+        [
+            {
+                "id": question_id,
+                "quiz_id": quiz_id,
+                "chunk_id": chunk_id,
+                "position": index,
+                "question_text": f"Pregunta {index}",
+                "topic": topic,
+                "options": '["A", "B", "C", "D"]',
+            }
+            for index, (question_id, topic) in enumerate(
+                zip(question_ids, topics),
+                start=1,
+            )
+        ],
+    )
+
+    return question_ids
+
+
+def test_topic_progress_uses_latest_attempt(progress_environment):
+    data = progress_environment
+
+    with data["engine"].begin() as connection:
+        attempt_ids = connection.execute(
+            text("""
+                SELECT id
+                FROM quiz_attempts
+                WHERE quiz_id = :quiz_id
+                ORDER BY submitted_at ASC, id ASC;
+            """),
+            {"quiz_id": data["quiz_a1"]},
+        ).scalars().all()
+
+        assert len(attempt_ids) == 2
+
+        question_ids = create_topic_questions(
+            connection,
+            data["quiz_a1"],
+            ["Past Perfect"] * 4,
+        )
+
+        # Primer intento: 2 correctas de 4.
+        # Segundo intento: 4 correctas de 4.
+        answers = []
+
+        for attempt_id, correct_count in zip(
+            attempt_ids,
+            [2, 4],
+        ):
+            for index, question_id in enumerate(question_ids):
+                is_correct = index < correct_count
+
+                answers.append({
+                    "attempt_id": attempt_id,
+                    "question_id": question_id,
+                    "selected_option": 0 if is_correct else 1,
+                    "is_correct": is_correct,
+                })
+
+        connection.execute(
+            text("""
+                INSERT INTO quiz_attempt_answers (
+                    attempt_id, question_id,
+                    selected_option, is_correct
+                )
+                VALUES (
+                    :attempt_id, :question_id,
+                    :selected_option, :is_correct
+                );
+            """),
+            answers,
+        )
+
+    result = progress_repository.get_topic_progress_for_user(
+        user_id=data["user_a"],
+    )
+
+    assert len(result["topics"]) == 1
+
+    topic = result["topics"][0]
+
+    assert topic["topic"] == "Past Perfect"
+    assert topic["questions_evaluated"] == 4
+    assert topic["correct_questions"] == 4
+    assert topic["incorrect_questions"] == 0
+    assert topic["accuracy_percent"] == 100.0
+    assert topic["status"] == "strong"
+
+
+def test_topic_progress_requires_sufficient_data(progress_environment):
+    data = progress_environment
+
+    with data["engine"].begin() as connection:
+        attempt_id = connection.execute(
+            text("""
+                SELECT id
+                FROM quiz_attempts
+                WHERE quiz_id = :quiz_id;
+            """),
+            {"quiz_id": data["quiz_a2"]},
+        ).scalar_one()
+
+        question_ids = create_topic_questions(
+            connection,
+            data["quiz_a2"],
+            ["Phrasal Verbs", "Phrasal Verbs", None, None],
+        )
+
+        # Dos preguntas del tema y dos preguntas antiguas sin topic.
+        # El intento tiene tres respuestas correctas en total.
+        answers = []
+
+        for question_id, is_correct in zip(
+            question_ids,
+            [True, False, True, True],
+        ):
+            answers.append({
+                "attempt_id": attempt_id,
+                "question_id": question_id,
+                "selected_option": 0 if is_correct else 1,
+                "is_correct": is_correct,
+            })
+
+        connection.execute(
+            text("""
+                INSERT INTO quiz_attempt_answers (
+                    attempt_id, question_id,
+                    selected_option, is_correct
+                )
+                VALUES (
+                    :attempt_id, :question_id,
+                    :selected_option, :is_correct
+                );
+            """),
+            answers,
+        )
+
+    result = progress_repository.get_topic_progress_for_user(
+        user_id=data["user_a"],
+    )
+
+    assert len(result["topics"]) == 1
+
+    topic = result["topics"][0]
+
+    assert topic["topic"] == "Phrasal Verbs"
+    assert topic["questions_evaluated"] == 2
+    assert topic["correct_questions"] == 1
+    assert topic["incorrect_questions"] == 1
+    assert topic["accuracy_percent"] == 50.0
+    assert topic["status"] == "insufficient_data"

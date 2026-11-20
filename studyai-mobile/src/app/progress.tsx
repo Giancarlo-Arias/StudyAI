@@ -3,13 +3,25 @@ import { typography } from "@/styles/typography";
 import { goBack } from "@/lib/navigation";
 import { LinearGradient } from "@/components/theme-gradient";
 import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
-import { ArrowLeft, ChartNoAxesCombined, ChevronRight, FileText, RefreshCw } from "lucide-react-native";
+import {
+  ArrowLeft,
+  BrainCircuit,
+  ChartNoAxesCombined,
+  ChevronRight,
+  FileText,
+  RefreshCw,
+} from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionView, SkeletonBlock } from "@/components/dashboard/dashboard-motion";
-import { getDocumentProgress, type DocumentProgress } from "@/lib/progress-api";
+import {
+  getDocumentProgress,
+  getTopicProgress,
+  type DocumentProgress,
+  type TopicProgress,
+} from "@/lib/progress-api";
 import { getDashboardPalette } from "@/styles/dashboard-overview.styles";
 
 type Palette = ReturnType<typeof getDashboardPalette>;
@@ -29,6 +41,80 @@ function formatDate(value: string | null): string {
         dateStyle: "medium",
         timeZone: "America/Costa_Rica",
       }).format(date);
+}
+
+function getTopicStatus(status: TopicProgress["status"], colors: Palette) {
+  switch (status) {
+    case "reinforce":
+      return {
+        label: "Reforzar",
+        color: colors.danger,
+        description: "Este tema necesita más práctica.",
+      };
+    case "review":
+      return {
+        label: "Repasar",
+        color: colors.accent,
+        description: "Vas avanzando, pero todavía puedes mejorar.",
+      };
+    case "strong":
+      return {
+        label: "Dominado",
+        color: colors.success,
+        description: "Tienes un buen rendimiento en este tema.",
+      };
+    default:
+      return {
+        label: "En evaluación",
+        color: colors.secondary,
+        description: "Se necesitan al menos 3 preguntas evaluadas para clasificar este tema.",
+      };
+  }
+}
+
+function TopicCard({ topic, colors, index }: {
+  topic: TopicProgress;
+  colors: Palette;
+  index: number;
+}) {
+  const status = getTopicStatus(topic.status, colors);
+  const percentage = Math.min(100, Math.max(0, topic.accuracy_percent));
+
+  return (
+    <MotionView delay={130 + Math.min(index, 6) * 60}>
+      <View style={[styles.topicCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+        <View style={styles.topicHeader}>
+          <View style={styles.topicInfo}>
+            <Text style={[styles.topicName, { color: colors.text }]}>{topic.topic}</Text>
+            <Text style={[styles.topicDocument, { color: colors.secondary }]} numberOfLines={2}>
+              {topic.filename}
+            </Text>
+          </View>
+
+          <View style={[styles.topicBadge, { backgroundColor: colors.softAccent }]}>
+            <Text style={[styles.topicBadgeText, { color: status.color }]}>{status.label}</Text>
+          </View>
+        </View>
+
+        <View style={styles.topicMetrics}>
+          <Text style={[styles.topicPercentage, { color: status.color }]}>
+            {formatScore(topic.accuracy_percent)}
+          </Text>
+          <Text style={[styles.topicAnswers, { color: colors.secondary }]}>
+            {topic.correct_questions} de {topic.questions_evaluated} correctas
+          </Text>
+        </View>
+
+        <View style={[styles.progressTrack, { backgroundColor: colors.softAccent }]}>
+          <View style={[styles.progressFill, { width: `${percentage}%`, backgroundColor: status.color }]} />
+        </View>
+
+        <Text style={[styles.topicDescription, { color: colors.secondary }]}>
+          {status.description}
+        </Text>
+      </View>
+    </MotionView>
+  );
 }
 
 function ProgressCard({ document, colors, index, onPress }: {
@@ -123,6 +209,7 @@ export default function ProgressScreen() {
   const colors = getDashboardPalette(dark);
 
   const [documents, setDocuments] = useState<DocumentProgress[]>([]);
+  const [topics, setTopics] = useState<TopicProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -138,10 +225,14 @@ export default function ProgressScreen() {
 
     let active = true;
 
-    void getDocumentProgress()
-      .then((data) => {
+    void Promise.all([
+      getDocumentProgress(),
+      getTopicProgress(),
+    ])
+      .then(([documentData, topicData]) => {
         if (!active) return;
-        setDocuments(data);
+        setDocuments(documentData);
+        setTopics(topicData);
       })
       .catch((caught: unknown) => {
         if (!active) return;
@@ -168,6 +259,7 @@ export default function ProgressScreen() {
   const totalQuizzes = documents.reduce((total, document) => total + document.total_quizzes, 0);
   const completedQuizzes = documents.reduce((total, document) => total + document.quizzes_completed, 0);
   const completion = totalQuizzes > 0 ? Math.round((completedQuizzes / totalQuizzes) * 100) : 0;
+  const weakTopics = topics.filter((topic) => topic.status === "reinforce").length;
 
   return (
     <LinearGradient colors={[colors.background, colors.backgroundEnd]} style={styles.screen}>
@@ -194,11 +286,11 @@ export default function ProgressScreen() {
           <MotionView delay={80} style={styles.intro}>
             <Text style={[styles.title, { color: colors.text }]}>Progreso académico</Text>
             <Text style={[styles.subtitle, { color: colors.secondary }]}>
-              Consulta tu rendimiento y los avances de cada documento.
+              Consulta tu rendimiento por temas y los avances de cada documento.
             </Text>
           </MotionView>
 
-          {loading && documents.length === 0 ? (
+          {loading && documents.length === 0 && topics.length === 0 ? (
             <View style={styles.skeletons}>
               <SkeletonBlock height={150} radius={22} isDark={dark} />
               <SkeletonBlock height={260} radius={20} isDark={dark} />
@@ -241,11 +333,49 @@ export default function ProgressScreen() {
                     <View style={[styles.progressTrack, { backgroundColor: colors.softAccent }]}>
                       <View style={[styles.progressFill, { width: `${completion}%`, backgroundColor: colors.accent }]} />
                     </View>
+
                     <Text style={[styles.summaryHint, { color: colors.secondary }]}>
                       Cuestionarios completados de todos tus documentos.
                     </Text>
                   </View>
                 </MotionView>
+              )}
+
+              {(documents.length > 0 || topics.length > 0) && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeading}>
+                    <View style={styles.topicSectionTitle}>
+                      <BrainCircuit size={20} color={colors.accent} strokeWidth={1.8} />
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>Rendimiento por tema</Text>
+                    </View>
+
+                    {weakTopics > 0 && (
+                      <Text style={[styles.sectionCount, { color: colors.danger }]}>
+                        {weakTopics} por reforzar
+                      </Text>
+                    )}
+                  </View>
+
+                  {topics.length > 0 ? (
+                    topics.map((topic, index) => (
+                      <TopicCard
+                        key={`${topic.document_id}-${topic.topic}`}
+                        topic={topic}
+                        colors={colors}
+                        index={index}
+                      />
+                    ))
+                  ) : (
+                    <View style={[styles.topicEmpty, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+                      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                        Aún no hay temas evaluados
+                      </Text>
+                      <Text style={[styles.emptyText, { color: colors.secondary }]}>
+                        Los resultados aparecerán cuando completes exámenes nuevos con preguntas clasificadas por tema.
+                      </Text>
+                    </View>
+                  )}
+                </View>
               )}
 
               {documents.length > 0 && (
@@ -272,7 +402,7 @@ export default function ProgressScreen() {
                 </View>
               )}
 
-              {!error && !loading && documents.length === 0 && (
+              {!error && !loading && documents.length === 0 && topics.length === 0 && (
                 <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.emptyTitle, { color: colors.text }]}>Sin progreso registrado</Text>
                   <Text style={[styles.emptyText, { color: colors.secondary }]}>
@@ -311,6 +441,19 @@ const styles = StyleSheet.create({
   sectionHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 5 },
   sectionTitle: { ...typography, fontSize: 17, fontWeight: "800" },
   sectionCount: { ...typography, fontSize: 12 },
+  topicSectionTitle: { flexDirection: "row", alignItems: "center", gap: 9, flexShrink: 1 },
+  topicCard: { borderWidth: 1, borderRadius: 20, padding: 16, gap: 13 },
+  topicHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  topicInfo: { flex: 1, gap: 5 },
+  topicName: { ...typography, fontSize: 15, fontWeight: "800", lineHeight: 21 },
+  topicDocument: { ...typography, fontSize: 11, lineHeight: 17 },
+  topicBadge: { borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
+  topicBadgeText: { ...typography, fontSize: 10, fontWeight: "800" },
+  topicMetrics: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 10 },
+  topicPercentage: { ...typography, fontSize: 24, fontWeight: "800" },
+  topicAnswers: { ...typography, fontSize: 11 },
+  topicDescription: { ...typography, fontSize: 11, lineHeight: 17 },
+  topicEmpty: { borderWidth: 1, borderRadius: 18, padding: 17, gap: 8 },
   card: { borderWidth: 1, borderRadius: 20, padding: 16, gap: 16 },
   documentHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   documentIcon: { width: 47, height: 47, borderRadius: 14, alignItems: "center", justifyContent: "center" },

@@ -7,7 +7,8 @@ class QuizQuestionBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question_text: str = Field(min_length=1, max_length=1000)
-    question_translation_es: str | None = Field(default=None, max_length=1000,)
+    question_translation_es: str | None = Field(default=None, max_length=1000)
+    topic: str | None = Field(default=None, max_length=80)
     options: list[str] = Field(min_length=4, max_length=4)
     explanation: str = Field(min_length=1, max_length=2000)
     chunk_id: UUID
@@ -29,6 +30,19 @@ class QuizQuestionBase(BaseModel):
             return None
 
         return value.strip() or None
+
+    @field_validator("topic")
+    @classmethod
+    def validate_topic(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        topic = value.strip()
+
+        if not 3 <= len(topic) <= 80:
+            raise ValueError("El tema debe tener entre 3 y 80 caracteres")
+
+        return topic
 
     @field_validator("options")
     @classmethod
@@ -63,6 +77,7 @@ class GeneratedQuiz(BaseModel):
 
 # Formato nuevo: Gemini indica el texto, no el índice.
 class GeminiQuizQuestion(QuizQuestionBase):
+    topic: str = Field(min_length=3, max_length=80)
     correct_answer: str = Field(min_length=1, max_length=1000)
 
     @field_validator("correct_answer")
